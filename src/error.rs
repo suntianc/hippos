@@ -156,9 +156,12 @@ impl From<&AppError> for (u16, String) {
             AppError::Timeout(_) => (408, "TIMEOUT".to_string()),
             AppError::Connection(_) => (503, "SERVICE_UNAVAILABLE".to_string()),
             AppError::Database(_) => (500, "INTERNAL_ERROR".to_string()),
+            AppError::Config(_) => (500, "CONFIG_ERROR".to_string()),
+            AppError::Serialization(_) => (400, "SERIALIZATION_ERROR".to_string()),
             AppError::VectorIndex(_) => (500, "INDEX_ERROR".to_string()),
             AppError::Embedding(_) => (500, "EMBEDDING_ERROR".to_string()),
-            _ => (500, "INTERNAL_ERROR".to_string()),
+            AppError::Internal(_) => (500, "INTERNAL_ERROR".to_string()),
+            AppError::Io(_) => (500, "IO_ERROR".to_string()),
         }
     }
 }

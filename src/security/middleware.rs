@@ -441,64 +441,6 @@ impl MiddlewareBuilder {
             }));
         }
 
-        // Validation
-        if self.enable_validation {
-            let validator = Arc::new(RequestValidator::production());
-            middleware.push(Box::new(move |req, next| {
-                let val = validator.clone();
-                Box::pin(
-                    async move { validation_middleware(req, next, val, 10 * 1024 * 1024).await },
-                )
-            }));
-        }
-
-        if self.enable_rate_limit {
-            let rate_limiter = self.app_state.rate_limiter.clone();
-            middleware.push(Box::new(move |req, next| {
-                let limiter = rate_limiter.clone();
-                Box::pin(async move { rate_limit_middleware(req, next, limiter).await })
-            }));
-        }
-
-        // Authentication
-        if self.require_auth {
-            let authenticator = self.app_state.authenticator.clone();
-            middleware.push(Box::new(move |req, next| {
-                let auth = authenticator.clone();
-                Box::pin(async move { auth_middleware(req, next, auth).await })
-            }));
-        }
-
-        if self.require_auth {
-            let authenticator = self.app_state.authenticator.clone();
-            middleware.push(Box::new(move |req, next| {
-                let auth = authenticator.clone();
-                Box::pin(async move { auth_middleware(req, next, auth).await })
-            }));
-        }
-
-        if self.require_auth && self.auth_resource.is_some() && self.auth_action.is_some() {
-            let authorizer = self.app_state.authorizer.clone();
-            let resource = self.auth_resource.clone().unwrap();
-            let action = self.auth_action.clone().unwrap();
-            middleware.push(Box::new(move |req, next| {
-                let authz = authorizer.clone();
-                let res = resource.clone();
-                let act = action.clone();
-                Box::pin(async move { authorize_middleware(req, next, authz, res, act).await })
-            }));
-        }
-
-        if self.enable_validation {
-            let validator = Arc::new(RequestValidator::production());
-            middleware.push(Box::new(move |req, next| {
-                let val = validator.clone();
-                Box::pin(
-                    async move { validation_middleware(req, next, val, 10 * 1024 * 1024).await },
-                )
-            }));
-        }
-
         middleware
     }
 }

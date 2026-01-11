@@ -1,8 +1,14 @@
 use hippos::api::{self, app_state::AppState};
 use hippos::config::loader::ConfigLoader;
 use hippos::index::{create_embedding_model, create_unified_index_service};
-use hippos::services::{create_dehydration_service, create_retrieval_service};
+use hippos::observability::{ObservabilityState, create_observability_router};
+use hippos::services::{
+    create_dehydration_service, create_retrieval_service, create_session_service,
+    create_turn_service,
+};
+use hippos::storage::repository::{SessionRepository, TurnRepository};
 use hippos::storage::surrealdb::SurrealPool;
+use std::sync::Arc;
 use tracing::info;
 
 #[tokio::main]
@@ -22,6 +28,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let db_pool = SurrealPool::new(config.database.clone()).await?;
     info!("Database connection pool initialized");
+
+    let session_repository_raw = SessionRepository::new(db_pool.clone().inner().await);
+    let turn_repository_raw = TurnRepository::new(db_pool.clone().inner().await);
+    info!("Repositories initialized");
 
     let embedding_model_for_index =
         create_embedding_model(&config.embedding.model_name, config.vector.dimension).await?;
@@ -46,8 +56,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let dehydration_service = create_dehydration_service(100, 5, 10);
     info!("Dehydration service initialized");
 
+    let session_repository = Arc::new(session_repository_raw);
+    let turn_repository = Arc::new(turn_repository_raw);
+
+    let session_service =
+        create_session_service(session_repository.clone(), turn_repository.clone());
+    info!("Session service initialized");
+
+    let turn_service = create_turn_service(turn_repository.clone(), session_repository.clone());
+    info!("Turn service initialized");
+
     let app_state = AppState::new(
-        db_pool,
+        db_pool.clone(),
+        (*session_repository).clone(),
+        (*turn_repository).clone(),
+        session_service as Box<dyn hippos::services::session::SessionService>,
+        turn_service as Box<dyn hippos::services::turn::TurnService>,
         retrieval_service as Box<dyn hippos::services::retrieval::RetrievalService>,
         dehydration_service as Box<dyn hippos::services::dehydration::DehydrationService>,
         Box::new(hippos::security::auth::CombinedAuthenticator::development()),
@@ -56,8 +80,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     info!("Application state created");
 
-    let router = api::create_router(app_state);
-    info!("API router created");
+    // 创建可观测性状态并集成路由
+    let observability_state = Arc::new(ObservabilityState::new("0.1.0".to_string()));
+    let api_router = api::create_router(app_state);
+    let router = create_observability_router(observability_state).merge(api_router);
+    info!("API router created with observability endpoints");
 
     let addr = format!("{}:{}", config.server.host, config.server.port);
     let listener = tokio::net::TcpListener::bind(&addr).await?;

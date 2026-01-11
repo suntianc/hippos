@@ -114,3 +114,12 @@ pub struct CreateTurnResponse {
     /// 创建时间
     pub created_at: DateTime<Utc>,
 }
+
+/// 删除轮次响应
+#[derive(Debug, Serialize)]
+pub struct DeleteTurnResponse {
+    /// 轮次 ID
+    pub id: String,
+    /// 消息
+    pub message: String,
+}

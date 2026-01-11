@@ -133,3 +133,21 @@ pub struct CreateSessionResponse {
     /// 创建时间
     pub created_at: DateTime<Utc>,
 }
+
+/// 更新会话响应
+#[derive(Debug, Serialize)]
+pub struct UpdateSessionResponse {
+    /// 会话 ID
+    pub id: String,
+    /// 消息
+    pub message: String,
+}
+
+/// 删除会话响应
+#[derive(Debug, Serialize)]
+pub struct DeleteSessionResponse {
+    /// 会话 ID
+    pub id: String,
+    /// 消息
+    pub message: String,
+}
