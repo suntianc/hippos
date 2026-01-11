@@ -39,11 +39,12 @@ pub async fn run_mcp_server() -> Result<(), Box<dyn std::error::Error>> {
     info!("Initializing MCP server...");
 
     // Create services in correct order
+    let db_pool = SurrealPool::new(DatabaseConfig::default()).await?;
+    let turn_repository = std::sync::Arc::new(crate::storage::repository::TurnRepository::new(
+        db_pool.inner().await,
+    ));
     let embedding_model = create_embedding_model("all-MiniLM-L6-v2", 384).await?;
-    let retrieval_service = create_retrieval_service(embedding_model);
-
-    // Create a dummy database pool for AppState compatibility
-    let _db_pool = SurrealPool::new(DatabaseConfig::default()).await?;
+    let retrieval_service = create_retrieval_service(embedding_model, turn_repository);
 
     // Create AppState-like structure for the MCP server
     let retrieval_service_arc = std::sync::Arc::from(retrieval_service);

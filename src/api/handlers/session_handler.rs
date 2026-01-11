@@ -215,6 +215,83 @@ pub async fn delete_session(
     Ok(Json(response))
 }
 
+pub async fn archive_session(
+    State(state): State<AppState>,
+    Extension(claims): Extension<Claims>,
+    Path(id): Path<String>,
+    Json(request): Json<ArchiveSessionRequest>,
+) -> Result<impl IntoResponse, AppError> {
+    debug!("Archiving session: {}", id);
+
+    // 验证会话存在且属于当前租户
+    let session = state
+        .session_service
+        .get_by_id(&id)
+        .await
+        .map_err(|e| AppError::Database(e.to_string()))?
+        .ok_or_else(|| AppError::NotFound(format!("Session not found: {}", id)))?;
+
+    if session.tenant_id != claims.tenant_id {
+        return Err(AppError::Authorization(
+            "Access denied to session of another tenant".to_string(),
+        ));
+    }
+
+    let session = state
+        .session_service
+        .archive(&id, request.reason)
+        .await
+        .map_err(|e| AppError::Database(e.to_string()))?;
+
+    let response = ArchiveSessionResponse {
+        id: session.id,
+        status: format!("{:?}", session.status),
+        archived_at: session.last_active_at,
+        message: "Session archived successfully".to_string(),
+    };
+
+    Ok(Json(response))
+}
+
+pub async fn restore_session(
+    State(state): State<AppState>,
+    Extension(claims): Extension<Claims>,
+    Path(id): Path<String>,
+    Json(request): Json<RestoreSessionRequest>,
+) -> Result<impl IntoResponse, AppError> {
+    debug!("Restoring session: {}", id);
+
+    // 验证会话存在且属于当前租户
+    let session = state
+        .session_service
+        .get_by_id(&id)
+        .await
+        .map_err(|e| AppError::Database(e.to_string()))?
+        .ok_or_else(|| AppError::NotFound(format!("Session not found: {}", id)))?;
+
+    if session.tenant_id != claims.tenant_id {
+        return Err(AppError::Authorization(
+            "Access denied to session of another tenant".to_string(),
+        ));
+    }
+
+    let session = state
+        .session_service
+        .restore(&id, request.new_name)
+        .await
+        .map_err(|e| AppError::Database(e.to_string()))?;
+
+    let response = RestoreSessionResponse {
+        id: session.id,
+        name: session.name,
+        status: format!("{:?}", session.status),
+        restored_at: session.last_active_at,
+        message: "Session restored successfully".to_string(),
+    };
+
+    Ok(Json(response))
+}
+
 #[derive(Debug, Deserialize, Default)]
 pub struct ListSessionsParams {
     pub page: Option<usize>,

@@ -151,3 +151,45 @@ pub struct DeleteSessionResponse {
     /// 消息
     pub message: String,
 }
+
+/// 归档会话请求
+#[derive(Debug, Deserialize, Default)]
+pub struct ArchiveSessionRequest {
+    /// 归档原因
+    pub reason: Option<String>,
+}
+
+/// 归档会话响应
+#[derive(Debug, Serialize)]
+pub struct ArchiveSessionResponse {
+    /// 会话 ID
+    pub id: String,
+    /// 会话状态
+    pub status: String,
+    /// 归档时间
+    pub archived_at: DateTime<Utc>,
+    /// 消息
+    pub message: String,
+}
+
+/// 恢复会话请求
+#[derive(Debug, Deserialize, Default)]
+pub struct RestoreSessionRequest {
+    /// 恢复后的新名称
+    pub new_name: Option<String>,
+}
+
+/// 恢复会话响应
+#[derive(Debug, Serialize)]
+pub struct RestoreSessionResponse {
+    /// 会话 ID
+    pub id: String,
+    /// 会话名称
+    pub name: String,
+    /// 会话状态
+    pub status: String,
+    /// 恢复时间
+    pub restored_at: DateTime<Utc>,
+    /// 消息
+    pub message: String,
+}

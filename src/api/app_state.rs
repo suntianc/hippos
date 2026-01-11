@@ -1,3 +1,4 @@
+use crate::index::IndexService;
 use crate::security::auth::Authenticator;
 use crate::security::rate_limit::RateLimiter;
 use crate::security::rbac::Authorizer;
@@ -26,6 +27,8 @@ pub struct AppState {
     pub retrieval_service: Arc<dyn RetrievalService>,
     /// Dehydration service for compressing context
     pub dehydration_service: Arc<dyn DehydrationService>,
+    /// Index service for search indexing
+    pub index_service: Arc<dyn IndexService>,
     /// Authenticator for API key and JWT validation
     pub authenticator: Arc<dyn Authenticator>,
     /// Authorizer for RBAC permission checks
@@ -44,6 +47,7 @@ impl std::fmt::Debug for AppState {
             .field("turn_service", &"Arc<dyn TurnService>")
             .field("retrieval_service", &"Arc<dyn RetrievalService>")
             .field("dehydration_service", &"Arc<dyn DehydrationService>")
+            .field("index_service", &"Arc<dyn IndexService>")
             .field("authenticator", &"Arc<dyn Authenticator>")
             .field("authorizer", &"Arc<dyn Authorizer>")
             .field("rate_limiter", &self.rate_limiter)
@@ -61,6 +65,7 @@ impl AppState {
         turn_service: Box<dyn TurnService>,
         retrieval_service: Box<dyn RetrievalService>,
         dehydration_service: Box<dyn DehydrationService>,
+        index_service: Box<dyn IndexService>,
         authenticator: Box<dyn Authenticator>,
         authorizer: Box<dyn Authorizer>,
         rate_limiter: RateLimiter,
@@ -73,6 +78,7 @@ impl AppState {
             turn_service: Arc::from(turn_service),
             retrieval_service: Arc::from(retrieval_service),
             dehydration_service: Arc::from(dehydration_service),
+            index_service: Arc::from(index_service),
             authenticator: Arc::from(authenticator),
             authorizer: Arc::from(authorizer),
             rate_limiter: Arc::from(rate_limiter),
@@ -88,6 +94,7 @@ impl AppState {
         turn_service: Box<dyn TurnService>,
         retrieval_service: Box<dyn RetrievalService>,
         dehydration_service: Box<dyn DehydrationService>,
+        index_service: Box<dyn IndexService>,
     ) -> Self {
         use crate::security::auth::CombinedAuthenticator;
         use crate::security::rate_limit::RateLimiter;
@@ -105,6 +112,7 @@ impl AppState {
             turn_service,
             retrieval_service,
             dehydration_service,
+            index_service,
             authenticator,
             authorizer,
             rate_limiter,

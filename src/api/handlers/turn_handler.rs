@@ -132,6 +132,42 @@ pub async fn delete_turn(
     Ok(Json(response))
 }
 
+pub async fn update_turn(
+    State(state): State<AppState>,
+    Path((session_id, turn_id)): Path<(String, String)>,
+    Json(request): Json<UpdateTurnRequest>,
+) -> Result<impl IntoResponse, AppError> {
+    debug!("Updating turn: {} for session: {}", turn_id, session_id);
+
+    let mut turn = state
+        .turn_service
+        .get_by_id(&turn_id)
+        .await
+        .map_err(|e| AppError::Database(e.to_string()))?
+        .ok_or_else(|| AppError::NotFound(format!("Turn not found: {}", turn_id)))?;
+
+    if turn.session_id != session_id {
+        return Err(AppError::NotFound(format!("Turn not found: {}", turn_id)));
+    }
+
+    if let Some(content) = request.content {
+        turn.raw_content = content;
+    }
+
+    state
+        .turn_service
+        .update(&turn)
+        .await
+        .map_err(|e| AppError::Database(e.to_string()))?;
+
+    let response = UpdateTurnResponse {
+        id: turn_id,
+        message: "Turn updated successfully".to_string(),
+    };
+
+    Ok(Json(response))
+}
+
 fn convert_turn_to_response(turn: Turn) -> TurnResponse {
     let metadata = TurnMetadataResponse {
         timestamp: turn.metadata.timestamp,

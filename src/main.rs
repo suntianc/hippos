@@ -31,6 +31,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let session_repository_raw = SessionRepository::new(db_pool.clone().inner().await);
     let turn_repository_raw = TurnRepository::new(db_pool.clone().inner().await);
+    let session_repository = Arc::new(session_repository_raw);
+    let turn_repository = Arc::new(turn_repository_raw);
     info!("Repositories initialized");
 
     let embedding_model_for_index =
@@ -43,21 +45,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let embedding_model_for_retrieval =
         create_embedding_model(&config.embedding.model_name, config.vector.dimension).await?;
 
-    let _index_service = create_unified_index_service(
+    let index_service = create_unified_index_service(
         hippos::index::create_vector_index(None, false),
         hippos::index::create_full_text_index(None, false),
         embedding_model_for_index,
     );
     info!("Index service initialized");
 
-    let retrieval_service = create_retrieval_service(embedding_model_for_retrieval);
+    let retrieval_service =
+        create_retrieval_service(embedding_model_for_retrieval, turn_repository.clone());
     info!("Retrieval service initialized");
 
     let dehydration_service = create_dehydration_service(100, 5, 10);
     info!("Dehydration service initialized");
-
-    let session_repository = Arc::new(session_repository_raw);
-    let turn_repository = Arc::new(turn_repository_raw);
 
     let session_service =
         create_session_service(session_repository.clone(), turn_repository.clone());
@@ -74,6 +74,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         turn_service as Box<dyn hippos::services::turn::TurnService>,
         retrieval_service as Box<dyn hippos::services::retrieval::RetrievalService>,
         dehydration_service as Box<dyn hippos::services::dehydration::DehydrationService>,
+        index_service as Box<dyn hippos::index::IndexService>,
         Box::new(hippos::security::auth::CombinedAuthenticator::development()),
         Box::new(hippos::security::rbac::SimpleAuthorizer::development()),
         hippos::security::rate_limit::RateLimiter::development(),

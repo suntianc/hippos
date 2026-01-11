@@ -18,4 +18,6 @@ pub fn create_session_router() -> Router<AppState> {
         .route("/:id", get(get_session))
         .route("/:id", put(update_session))
         .route("/:id", delete(delete_session))
+        .route("/:id/archive", post(archive_session))
+        .route("/:id/restore", post(restore_session))
 }

@@ -123,3 +123,27 @@ pub struct DeleteTurnResponse {
     /// 消息
     pub message: String,
 }
+
+/// 更新轮次请求
+#[derive(Debug, Deserialize, Default)]
+pub struct UpdateTurnRequest {
+    /// 原始内容
+    pub content: Option<String>,
+    /// 消息类型
+    pub message_type: Option<String>,
+    /// 角色
+    pub role: Option<String>,
+    /// 模型名称
+    pub model: Option<String>,
+    /// 用户 ID
+    pub user_id: Option<String>,
+}
+
+/// 更新轮次响应
+#[derive(Debug, Serialize)]
+pub struct UpdateTurnResponse {
+    /// 轮次 ID
+    pub id: String,
+    /// 消息
+    pub message: String,
+}
