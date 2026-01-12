@@ -10,7 +10,6 @@ use tracing::debug;
 use crate::{
     api::{app_state::AppState, dto::session_dto::*},
     error::AppError,
-    models::session::SessionStatus,
     security::auth::Claims,
     services::session::{Pagination, SessionQuery},
 };
@@ -258,7 +257,7 @@ pub async fn archive_session(
         ));
     }
 
-    if session.status == SessionStatus::Archived {
+    if session.status == "Archived" {
         return Err(AppError::Validation(
             "Session is already archived".to_string(),
         ));
@@ -301,7 +300,7 @@ pub async fn restore_session(
         ));
     }
 
-    if session.status != SessionStatus::Archived {
+    if session.status != "Archived" {
         return Err(AppError::Validation(
             "Only archived sessions can be restored".to_string(),
         ));

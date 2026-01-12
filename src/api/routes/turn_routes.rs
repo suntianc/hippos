@@ -13,9 +13,9 @@ use crate::api::app_state::AppState;
 /// 创建轮次路由器
 pub fn create_turn_router() -> Router<AppState> {
     Router::new()
-        .route("/:session_id/turns", post(create_turn))
-        .route("/:session_id/turns", get(list_turns))
-        .route("/:session_id/turns/:turn_id", get(get_turn))
-        .route("/:session_id/turns/:turn_id", put(update_turn))
-        .route("/:session_id/turns/:turn_id", delete(delete_turn))
+        .route("/sessions/:session_id/turns", post(create_turn))
+        .route("/sessions/:session_id/turns", get(list_turns))
+        .route("/sessions/:session_id/turns/:turn_id", get(get_turn))
+        .route("/sessions/:session_id/turns/:turn_id", put(update_turn))
+        .route("/sessions/:session_id/turns/:turn_id", delete(delete_turn))
 }

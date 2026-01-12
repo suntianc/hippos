@@ -1,4 +1,5 @@
 use crate::config::config::DatabaseConfig;
+use reqwest;
 use std::sync::Arc;
 use surrealdb::{
     Surreal,
@@ -14,6 +15,8 @@ pub struct SurrealPool {
     db: Arc<Mutex<Option<Surreal<Any>>>>,
     /// 连接配置
     config: DatabaseConfig,
+    /// HTTP client for raw queries
+    http_client: Arc<reqwest::Client>,
 }
 
 impl SurrealPool {
@@ -33,9 +36,13 @@ impl SurrealPool {
             .use_db(&config.database)
             .await?;
 
+        // Create HTTP client
+        let http_client = Arc::new(reqwest::Client::new());
+
         Ok(Self {
             db: Arc::new(Mutex::new(Some(db))),
             config,
+            http_client,
         })
     }
 
@@ -48,6 +55,16 @@ impl SurrealPool {
     pub async fn inner(&self) -> Surreal<Any> {
         let guard = self.db.lock().await;
         guard.as_ref().expect("Database connection closed").clone()
+    }
+
+    /// 获取 HTTP client
+    pub fn http_client(&self) -> Arc<reqwest::Client> {
+        self.http_client.clone()
+    }
+
+    /// 获取数据库配置
+    pub fn config(&self) -> &DatabaseConfig {
+        &self.config
     }
 
     /// 关闭连接
@@ -66,5 +83,15 @@ impl SurrealPoolConn {
     /// 获取数据库实例
     pub async fn db(&self) -> Surreal<Any> {
         self.pool.inner().await
+    }
+
+    /// 获取 HTTP client
+    pub fn http_client(&self) -> Arc<reqwest::Client> {
+        self.pool.http_client()
+    }
+
+    /// 获取数据库配置
+    pub fn config(&self) -> &DatabaseConfig {
+        self.pool.config()
     }
 }

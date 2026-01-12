@@ -42,6 +42,7 @@ pub async fn run_mcp_server() -> Result<(), Box<dyn std::error::Error>> {
     let db_pool = SurrealPool::new(DatabaseConfig::default()).await?;
     let turn_repository = std::sync::Arc::new(crate::storage::repository::TurnRepository::new(
         db_pool.inner().await,
+        db_pool.clone(),
     ));
     let embedding_config = crate::config::config::EmbeddingConfig {
         model_name: "all-MiniLM-L6-v2".into(),

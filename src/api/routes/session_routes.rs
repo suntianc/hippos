@@ -13,11 +13,11 @@ use crate::api::app_state::AppState;
 /// 创建会话路由器
 pub fn create_session_router() -> Router<AppState> {
     Router::new()
-        .route("/", post(create_session))
-        .route("/", get(list_sessions))
-        .route("/:id", get(get_session))
-        .route("/:id", put(update_session))
-        .route("/:id", delete(delete_session))
-        .route("/:id/archive", post(archive_session))
-        .route("/:id/restore", post(restore_session))
+        .route("/sessions", post(create_session))
+        .route("/sessions", get(list_sessions))
+        .route("/sessions/:id", get(get_session))
+        .route("/sessions/:id", put(update_session))
+        .route("/sessions/:id", delete(delete_session))
+        .route("/sessions/:id/archive", post(archive_session))
+        .route("/sessions/:id/restore", post(restore_session))
 }

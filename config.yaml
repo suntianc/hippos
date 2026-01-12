@@ -43,10 +43,10 @@ file_max_size = 104857600
 file_max_count = 10
 
 [embedding]
-model_name = "mxbai-embed-large"
+model_name = "nomic-embed-text:latest"
 model_path = ""
 batch_size = 32
 use_gpu = false
-backend = "simple"
+backend = "ollama"
 ollama_url = "http://localhost:11434"
 ollama_timeout = 60

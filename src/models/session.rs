@@ -1,19 +1,51 @@
 use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
 
-/// 会话状态
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub enum SessionStatus {
-    /// 活跃状态
-    Active,
-    /// 已暂停
-    Paused,
-    /// 已归档
-    Archived,
-    /// 已删除
-    Deleted,
+/// Custom deserializer for SurrealDB record IDs
+/// Handles both plain strings and Thing objects (SurrealDB 2.x format)
+fn deserialize_id<'de, D>(deserializer: D) -> Result<String, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    // First try to deserialize as a plain string
+    let value = serde_json::Value::deserialize(deserializer)?;
+
+    // If it's a string, return it
+    if let Some(s) = value.as_str() {
+        // Handle SurrealDB record ID format "session:⟨uuid⟩"
+        if let Some(uuid) = s.split("⟨").nth(1) {
+            if let Some(uuid) = uuid.split("⟩").next() {
+                return Ok(uuid.to_string());
+            }
+        }
+        return Ok(s.to_string());
+    }
+
+    // If it's a map/object, try to extract the id field (Thing format)
+    if let Some(map) = value.as_object() {
+        if let Some(tb) = map.get("tb").and_then(|v| v.as_str()) {
+            if let Some(id_val) = map.get("id") {
+                match id_val {
+                    serde_json::Value::String(s) => {
+                        if let Some(uuid) = s.split("⟨").nth(1) {
+                            if let Some(uuid) = uuid.split("⟩").next() {
+                                return Ok(uuid.to_string());
+                            }
+                        }
+                        return Ok(s.clone());
+                    }
+                    serde_json::Value::Number(n) => return Ok(n.to_string()),
+                    _ => return Ok(id_val.to_string()),
+                }
+            }
+        }
+    }
+
+    Err(serde::de::Error::custom(
+        "Expected string or SurrealDB record ID",
+    ))
 }
 
 /// 会话配置
@@ -50,9 +82,9 @@ pub struct SessionStats {
 ///
 /// 承载会话的元数据信息，是数据访问的根节点。
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(from = "SessionHelper", into = "SessionHelper")]
 pub struct Session {
     /// 会话唯一标识
+    #[serde(deserialize_with = "deserialize_id")]
     pub id: String,
 
     /// 所属租户/用户标识
@@ -70,17 +102,25 @@ pub struct Session {
     /// 最后活跃时间
     pub last_active_at: DateTime<Utc>,
 
-    /// 会话状态
-    pub status: SessionStatus,
+    /// 会话状态 (Active, Paused, Archived, Deleted)
+    #[serde(default = "default_status")]
+    pub status: String,
 
     /// 会话配置
+    #[serde(default)]
     pub config: SessionConfig,
 
     /// 统计信息
+    #[serde(default)]
     pub stats: SessionStats,
 
     /// 元数据
+    #[serde(default)]
     pub metadata: HashMap<String, String>,
+}
+
+fn default_status() -> String {
+    "Active".to_string()
 }
 
 impl Session {
@@ -94,7 +134,7 @@ impl Session {
             description: None,
             created_at: now,
             last_active_at: now,
-            status: SessionStatus::Active,
+            status: "Active".to_string(),
             config: SessionConfig::default(),
             stats: SessionStats::default(),
             metadata: HashMap::new(),
@@ -113,63 +153,13 @@ impl Session {
         self.touch();
     }
 
-    /// 检查是否允许更多轮次
-    pub fn can_add_turn(&self) -> bool {
-        self.config.max_turns == 0 || self.stats.total_turns < self.config.max_turns as u64
+    /// 检查会话是否处于指定状态
+    pub fn is_status(&self, status: &str) -> bool {
+        self.status == status
     }
-}
 
-/// 会话序列化辅助
-#[derive(Serialize, Deserialize)]
-struct SessionHelper {
-    id: String,
-    tenant_id: String,
-    name: String,
-    description: Option<String>,
-    created_at: DateTime<Utc>,
-    last_active_at: DateTime<Utc>,
-    status: SessionStatus,
-    config: SessionConfig,
-    stats: SessionStats,
-    metadata: HashMap<String, String>,
-}
-
-impl From<SessionHelper> for Session {
-    fn from(helper: SessionHelper) -> Self {
-        Session {
-            id: helper.id,
-            tenant_id: helper.tenant_id,
-            name: helper.name,
-            description: helper.description,
-            created_at: helper.created_at,
-            last_active_at: helper.last_active_at,
-            status: helper.status,
-            config: helper.config,
-            stats: helper.stats,
-            metadata: helper.metadata,
-        }
-    }
-}
-
-impl From<Session> for SessionHelper {
-    fn from(session: Session) -> Self {
-        SessionHelper {
-            id: session.id,
-            tenant_id: session.tenant_id,
-            name: session.name,
-            description: session.description,
-            created_at: session.created_at,
-            last_active_at: session.last_active_at,
-            status: session.status,
-            config: session.config,
-            stats: session.stats,
-            metadata: session.metadata,
-        }
-    }
-}
-
-impl Default for SessionStatus {
-    fn default() -> Self {
-        SessionStatus::Active
+    /// 设置会话状态
+    pub fn set_status(&mut self, status: &str) {
+        self.status = status.to_string();
     }
 }

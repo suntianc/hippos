@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 use crate::error::{AppError, Result};
-use crate::models::session::{Session, SessionStatus};
+use crate::models::session::Session;
 use crate::storage::repository::{Repository, SessionRepository, TurnRepository};
 
 /// 分页参数
@@ -45,7 +45,7 @@ pub struct SessionQuery {
     /// 分页参数
     pub pagination: Pagination,
     /// 状态过滤
-    pub status: Option<SessionStatus>,
+    pub status: Option<String>,
 }
 
 /// 会话服务 trait
@@ -200,11 +200,11 @@ impl SessionService for SessionServiceImpl {
             .await?
             .ok_or_else(|| AppError::NotFound(format!("Session not found: {}", id)))?;
 
-        if session.status == SessionStatus::Archived {
+        if session.status == "Archived" {
             return Ok(session);
         }
 
-        session.status = SessionStatus::Archived;
+        session.status = "Archived".to_string();
         self.update(&session).await
     }
 
@@ -214,13 +214,13 @@ impl SessionService for SessionServiceImpl {
             .await?
             .ok_or_else(|| AppError::NotFound(format!("Session not found: {}", id)))?;
 
-        if session.status != SessionStatus::Archived {
+        if session.status != "Archived" {
             return Err(AppError::Validation(
                 "Only archived sessions can be restored".to_string(),
             ));
         }
 
-        session.status = SessionStatus::Active;
+        session.status = "Active".to_string();
         if let Some(name) = new_name {
             session.name = name;
         }
@@ -283,6 +283,6 @@ mod tests {
         let session = Session::new("tenant_1", "Test Session");
         assert_eq!(session.tenant_id, "tenant_1");
         assert_eq!(session.name, "Test Session");
-        assert_eq!(session.status, SessionStatus::Active);
+        assert_eq!(session.status, "Active");
     }
 }

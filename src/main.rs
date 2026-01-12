@@ -29,8 +29,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let db_pool = SurrealPool::new(config.database.clone()).await?;
     info!("Database connection pool initialized");
 
-    let session_repository_raw = SessionRepository::new(db_pool.clone().inner().await);
-    let turn_repository_raw = TurnRepository::new(db_pool.clone().inner().await);
+    let session_repository_raw = SessionRepository::new(db_pool.clone());
+    let turn_repository_raw = TurnRepository::new(db_pool.clone().inner().await, db_pool.clone());
     let session_repository = Arc::new(session_repository_raw);
     let turn_repository = Arc::new(turn_repository_raw);
     info!("Repositories initialized");
