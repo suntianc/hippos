@@ -1,6 +1,10 @@
 use crate::config::config::DatabaseConfig;
 use std::sync::Arc;
-use surrealdb::{Surreal, engine::any::Any, engine::any::connect, opt::auth::Root};
+use surrealdb::{
+    Surreal,
+    engine::any::{Any, connect},
+    opt::auth::Root,
+};
 use tokio::sync::Mutex;
 
 /// SurrealDB 连接池

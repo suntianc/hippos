@@ -76,6 +76,8 @@ impl SessionRepository {
 #[async_trait]
 impl Repository<Session> for SessionRepository {
     async fn create(&self, session: &Session) -> Result<Session> {
+        let session = session.clone();
+        let session_id = session.id.clone();
         let created: Option<Session> = self
             .db
             .create(("session", &session.id))
@@ -83,7 +85,7 @@ impl Repository<Session> for SessionRepository {
             .await?;
 
         created.ok_or_else(|| {
-            crate::error::AppError::Database(format!("Failed to create session: {}", session.id))
+            crate::error::AppError::Database(format!("Failed to create session: {}", session_id))
         })
     }
 
@@ -93,6 +95,7 @@ impl Repository<Session> for SessionRepository {
     }
 
     async fn update(&self, id: &str, session: &Session) -> Result<Option<Session>> {
+        let session = session.clone();
         let updated: Option<Session> = self.db.update(("session", id)).content(session).await?;
         Ok(updated)
     }
@@ -108,7 +111,8 @@ impl Repository<Session> for SessionRepository {
             "SELECT * FROM session ORDER BY created_at DESC LIMIT {} START {}",
             limit, start
         );
-        let result: Vec<Session> = self.db.query(query).await?.take(0)?;
+        let mut response = self.db.query(query).await?;
+        let result: Vec<Session> = response.take(0)?;
         Ok(result)
     }
 
@@ -135,6 +139,7 @@ impl Repository<Session> for SessionRepository {
         start: usize,
     ) -> Result<Vec<Session>> {
         // Use parameterized query to prevent SQL injection
+        let tenant_id = tenant_id.to_string();
         let query = "
             SELECT * FROM session 
             WHERE tenant_id = $tenant_id 
@@ -153,6 +158,7 @@ impl Repository<Session> for SessionRepository {
     }
 
     async fn count_by_tenant(&self, tenant_id: &str) -> Result<u64> {
+        let tenant_id = tenant_id.to_string();
         let query = "
             SELECT count() FROM session 
             WHERE tenant_id = $tenant_id 
@@ -189,6 +195,7 @@ impl TurnRepository {
 
     /// 获取指定会话的最大 turn_number（使用事务防止竞态条件）
     pub async fn get_max_turn_number(&self, session_id: &str) -> Result<u64> {
+        let session_id = session_id.to_string();
         let response: Vec<Turn> = self
             .db
             .query("SELECT * FROM turn WHERE session_id = $session_id")
@@ -210,18 +217,16 @@ impl TurnRepository {
 
         let mut turn_with_number = turn.clone();
         turn_with_number.turn_number = turn_number;
+        let turn_id = turn_with_number.id.clone();
 
         let created: Option<Turn> = self
             .db
             .create(("turn", &turn_with_number.id))
-            .content(&turn_with_number)
+            .content(turn_with_number)
             .await?;
 
         created.ok_or_else(|| {
-            crate::error::AppError::Database(format!(
-                "Failed to create turn: {}",
-                turn_with_number.id
-            ))
+            crate::error::AppError::Database(format!("Failed to create turn: {}", turn_id))
         })
     }
 }
@@ -229,10 +234,12 @@ impl TurnRepository {
 #[async_trait]
 impl Repository<Turn> for TurnRepository {
     async fn create(&self, turn: &Turn) -> Result<Turn> {
+        let turn = turn.clone();
+        let turn_id = turn.id.clone();
         let created: Option<Turn> = self.db.create(("turn", &turn.id)).content(turn).await?;
 
         created.ok_or_else(|| {
-            crate::error::AppError::Database(format!("Failed to create turn: {}", turn.id))
+            crate::error::AppError::Database(format!("Failed to create turn: {}", turn_id))
         })
     }
 
@@ -242,6 +249,7 @@ impl Repository<Turn> for TurnRepository {
     }
 
     async fn update(&self, id: &str, turn: &Turn) -> Result<Option<Turn>> {
+        let turn = turn.clone();
         let updated: Option<Turn> = self.db.update(("turn", id)).content(turn).await?;
         Ok(updated)
     }
@@ -283,6 +291,7 @@ impl Repository<Turn> for TurnRepository {
         limit: usize,
         start: usize,
     ) -> Result<Vec<Turn>> {
+        let session_id = session_id.to_string();
         let query = "
             SELECT * FROM turn 
             WHERE session_id = $session_id 
@@ -301,6 +310,7 @@ impl Repository<Turn> for TurnRepository {
     }
 
     async fn count_by_session(&self, session_id: &str) -> Result<u64> {
+        let session_id = session_id.to_string();
         let query = "
             SELECT count() FROM turn 
             WHERE session_id = $session_id 
@@ -339,6 +349,8 @@ impl IndexRecordRepository {
 #[async_trait]
 impl Repository<IndexRecord> for IndexRecordRepository {
     async fn create(&self, record: &IndexRecord) -> Result<IndexRecord> {
+        let record = record.clone();
+        let turn_id = record.turn_id.clone();
         let created: Option<IndexRecord> = self
             .db
             .create(("index_record", &record.turn_id))
@@ -346,10 +358,7 @@ impl Repository<IndexRecord> for IndexRecordRepository {
             .await?;
 
         created.ok_or_else(|| {
-            crate::error::AppError::Database(format!(
-                "Failed to create index record: {}",
-                record.turn_id
-            ))
+            crate::error::AppError::Database(format!("Failed to create index record: {}", turn_id))
         })
     }
 
@@ -359,6 +368,7 @@ impl Repository<IndexRecord> for IndexRecordRepository {
     }
 
     async fn update(&self, id: &str, record: &IndexRecord) -> Result<Option<IndexRecord>> {
+        let record = record.clone();
         let updated: Option<IndexRecord> =
             self.db.update(("index_record", id)).content(record).await?;
         Ok(updated)
@@ -398,6 +408,7 @@ impl Repository<IndexRecord> for IndexRecordRepository {
         limit: usize,
         start: usize,
     ) -> Result<Vec<IndexRecord>> {
+        let tenant_id = tenant_id.to_string();
         let query = "
             SELECT * FROM index_record 
             WHERE tenant_id = $tenant_id 
@@ -416,6 +427,7 @@ impl Repository<IndexRecord> for IndexRecordRepository {
     }
 
     async fn count_by_tenant(&self, tenant_id: &str) -> Result<u64> {
+        let tenant_id = tenant_id.to_string();
         let query = "
             SELECT count() FROM index_record 
             WHERE tenant_id = $tenant_id 

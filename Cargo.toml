@@ -29,7 +29,7 @@ utoipa = "5.4"
 utoipa-axum = "0.2"
 
 # === 数据库 ===
-surrealdb = { version = "1.0", features = ["kv-mem", "kv-rocksdb", "kv-fdb"] }
+surrealdb = { version = "2.0.0", features = ["http", "kv-rocksdb"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_with = "3.4"
