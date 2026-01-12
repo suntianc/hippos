@@ -36,6 +36,7 @@ pub trait VectorIndex: Send + Sync {
     ) -> Result<Vec<VectorSearchResult>>;
     async fn delete(&self, id: &str) -> Result<bool>;
     async fn count(&self, session_id: &str) -> Result<u64>;
+    async fn exists(&self, id: &str) -> Result<bool>;
 }
 
 pub struct MemoryVectorIndex {
@@ -118,6 +119,10 @@ impl VectorIndex for MemoryVectorIndex {
             .filter(|ref_multi| ref_multi.value().1.session_id == session_id)
             .count();
         Ok(count as u64)
+    }
+
+    async fn exists(&self, id: &str) -> Result<bool> {
+        Ok(self.vectors.contains_key(id))
     }
 }
 

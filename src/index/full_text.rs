@@ -32,6 +32,7 @@ pub trait FullTextIndex: Send + Sync {
     async fn search(&self, query: &str, session_id: &str, limit: usize) -> Result<Vec<FtsResult>>;
     async fn delete(&self, id: &str) -> Result<bool>;
     async fn count(&self, session_id: &str) -> Result<u64>;
+    async fn exists(&self, id: &str) -> Result<bool>;
 }
 
 pub struct MemoryFtsIndex {
@@ -117,6 +118,10 @@ impl FullTextIndex for MemoryFtsIndex {
             .filter(|ref_multi| ref_multi.value().1.session_id == session_id)
             .count();
         Ok(count as u64)
+    }
+
+    async fn exists(&self, id: &str) -> Result<bool> {
+        Ok(self.documents.contains_key(id))
     }
 }
 

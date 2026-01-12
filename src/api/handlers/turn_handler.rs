@@ -1,6 +1,6 @@
 use axum::{
     Json,
-    extract::{Path, Query, State},
+    extract::{Extension, Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
 };
@@ -11,11 +11,13 @@ use crate::{
     api::{app_state::AppState, dto::turn_dto::*},
     error::AppError,
     models::turn::Turn,
+    security::auth::Claims,
     services::turn::TurnQuery,
 };
 
 pub async fn create_turn(
     State(state): State<AppState>,
+    Extension(claims): Extension<Claims>,
     Path(session_id): Path<String>,
     Json(request): Json<CreateTurnRequest>,
 ) -> Result<impl IntoResponse, AppError> {
@@ -23,6 +25,19 @@ pub async fn create_turn(
 
     if request.content.is_empty() {
         return Err(AppError::Validation("Content cannot be empty".to_string()));
+    }
+
+    let session = state
+        .session_service
+        .get_by_id(&session_id)
+        .await
+        .map_err(|e| AppError::Database(e.to_string()))?
+        .ok_or_else(|| AppError::NotFound(format!("Session not found: {}", session_id)))?;
+
+    if session.tenant_id != claims.tenant_id {
+        return Err(AppError::Authorization(
+            "Access denied to session of another tenant".to_string(),
+        ));
     }
 
     let turn = state
@@ -42,10 +57,24 @@ pub async fn create_turn(
 
 pub async fn list_turns(
     State(state): State<AppState>,
+    Extension(claims): Extension<Claims>,
     Path(session_id): Path<String>,
     Query(params): Query<ListTurnsParams>,
 ) -> Result<impl IntoResponse, AppError> {
     debug!("Listing turns for session: {}", session_id);
+
+    let session = state
+        .session_service
+        .get_by_id(&session_id)
+        .await
+        .map_err(|e| AppError::Database(e.to_string()))?
+        .ok_or_else(|| AppError::NotFound(format!("Session not found: {}", session_id)))?;
+
+    if session.tenant_id != claims.tenant_id {
+        return Err(AppError::Authorization(
+            "Access denied to session of another tenant".to_string(),
+        ));
+    }
 
     let page = params.page.unwrap_or(1);
     let page_size = params.page_size.unwrap_or(50);
@@ -103,9 +132,23 @@ pub async fn get_turn(
 
 pub async fn delete_turn(
     State(state): State<AppState>,
+    Extension(claims): Extension<Claims>,
     Path((session_id, turn_id)): Path<(String, String)>,
 ) -> Result<impl IntoResponse, AppError> {
     debug!("Deleting turn: {} for session: {}", turn_id, session_id);
+
+    let session = state
+        .session_service
+        .get_by_id(&session_id)
+        .await
+        .map_err(|e| AppError::Database(e.to_string()))?
+        .ok_or_else(|| AppError::NotFound(format!("Session not found: {}", session_id)))?;
+
+    if session.tenant_id != claims.tenant_id {
+        return Err(AppError::Authorization(
+            "Access denied to session of another tenant".to_string(),
+        ));
+    }
 
     let turn = state
         .turn_service
@@ -134,10 +177,24 @@ pub async fn delete_turn(
 
 pub async fn update_turn(
     State(state): State<AppState>,
+    Extension(claims): Extension<Claims>,
     Path((session_id, turn_id)): Path<(String, String)>,
     Json(request): Json<UpdateTurnRequest>,
 ) -> Result<impl IntoResponse, AppError> {
     debug!("Updating turn: {} for session: {}", turn_id, session_id);
+
+    let session = state
+        .session_service
+        .get_by_id(&session_id)
+        .await
+        .map_err(|e| AppError::Database(e.to_string()))?
+        .ok_or_else(|| AppError::NotFound(format!("Session not found: {}", session_id)))?;
+
+    if session.tenant_id != claims.tenant_id {
+        return Err(AppError::Authorization(
+            "Access denied to session of another tenant".to_string(),
+        ));
+    }
 
     let mut turn = state
         .turn_service

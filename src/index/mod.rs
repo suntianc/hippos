@@ -162,6 +162,22 @@ impl UnifiedIndexService {
 #[async_trait]
 impl IndexService for UnifiedIndexService {
     async fn index_turn(&self, turn: &Turn) -> Result<IndexRecord> {
+        let turn_id = &turn.id;
+        let vector_id = format!("vec_{}", turn_id);
+
+        let vector_exists = self.vector_index.exists(&vector_id).await?;
+        let fts_exists = self
+            .full_text_index
+            .exists(&format!("doc_{}", turn_id))
+            .await?;
+
+        if vector_exists || fts_exists {
+            return Err(crate::error::AppError::Validation(format!(
+                "Turn {} is already indexed",
+                turn_id
+            )));
+        }
+
         let gist = turn
             .dehydrated
             .as_ref()

@@ -142,18 +142,33 @@ impl SessionService for SessionServiceImpl {
             .await?
             .ok_or_else(|| AppError::NotFound(format!("Session not found: {}", id)))?;
 
-        // 2. 删除所有关联的 Turn（级联删除）
-        let turns = self
-            .turn_repository
-            .list_by_session(id, 1000, 0)
-            .await
-            .map_err(|e| AppError::Database(e.to_string()))?;
+        // 2. 删除所有关联的 Turn（级联删除，使用 while 循环处理大量数据）
+        const BATCH_SIZE: usize = 100;
+        let mut offset = 0usize;
 
-        for turn in turns {
-            self.turn_repository
-                .delete(&turn.id)
+        loop {
+            let turns = self
+                .turn_repository
+                .list_by_session(id, BATCH_SIZE, offset)
                 .await
                 .map_err(|e| AppError::Database(e.to_string()))?;
+
+            if turns.is_empty() {
+                break;
+            }
+
+            for turn in &turns {
+                self.turn_repository
+                    .delete(&turn.id)
+                    .await
+                    .map_err(|e| AppError::Database(e.to_string()))?;
+            }
+
+            if turns.len() < BATCH_SIZE {
+                break;
+            }
+
+            offset += turns.len();
         }
 
         // 3. 删除 Session
@@ -184,6 +199,11 @@ impl SessionService for SessionServiceImpl {
             .get_by_id(id)
             .await?
             .ok_or_else(|| AppError::NotFound(format!("Session not found: {}", id)))?;
+
+        if session.status == SessionStatus::Archived {
+            return Ok(session);
+        }
+
         session.status = SessionStatus::Archived;
         self.update(&session).await
     }
@@ -193,6 +213,13 @@ impl SessionService for SessionServiceImpl {
             .get_by_id(id)
             .await?
             .ok_or_else(|| AppError::NotFound(format!("Session not found: {}", id)))?;
+
+        if session.status != SessionStatus::Archived {
+            return Err(AppError::Validation(
+                "Only archived sessions can be restored".to_string(),
+            ));
+        }
+
         session.status = SessionStatus::Active;
         if let Some(name) = new_name {
             session.name = name;

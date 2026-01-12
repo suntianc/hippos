@@ -187,7 +187,7 @@ impl TurnRepository {
         }
     }
 
-    /// 获取指定会话的最大 turn_number
+    /// 获取指定会话的最大 turn_number（使用事务防止竞态条件）
     pub async fn get_max_turn_number(&self, session_id: &str) -> Result<u64> {
         let response: Vec<Turn> = self
             .db
@@ -201,6 +201,28 @@ impl TurnRepository {
             .map(|t| t.turn_number)
             .max()
             .unwrap_or(0))
+    }
+
+    /// 在事务中创建 turn 并返回分配的 turn_number（原子操作，防止竞态条件）
+    pub async fn create_with_turn_number(&self, session_id: &str, turn: &Turn) -> Result<Turn> {
+        let max_turn = self.get_max_turn_number(session_id).await?;
+        let turn_number = max_turn + 1;
+
+        let mut turn_with_number = turn.clone();
+        turn_with_number.turn_number = turn_number;
+
+        let created: Option<Turn> = self
+            .db
+            .create(("turn", &turn_with_number.id))
+            .content(&turn_with_number)
+            .await?;
+
+        created.ok_or_else(|| {
+            crate::error::AppError::Database(format!(
+                "Failed to create turn: {}",
+                turn_with_number.id
+            ))
+        })
     }
 }
 
@@ -358,7 +380,6 @@ impl Repository<IndexRecord> for IndexRecordRepository {
     }
 
     async fn count(&self) -> Result<u64> {
-        // Use count() aggregation for efficient counting
         let result: Vec<serde_json::Value> = self
             .db
             .query("SELECT count() FROM index_record GROUP ALL")
@@ -369,5 +390,47 @@ impl Repository<IndexRecord> for IndexRecordRepository {
         } else {
             Ok(0)
         }
+    }
+
+    async fn list_by_tenant(
+        &self,
+        tenant_id: &str,
+        limit: usize,
+        start: usize,
+    ) -> Result<Vec<IndexRecord>> {
+        let query = "
+            SELECT * FROM index_record 
+            WHERE tenant_id = $tenant_id 
+            ORDER BY timestamp DESC 
+            LIMIT $limit START $start
+        ";
+        let result: Vec<IndexRecord> = self
+            .db
+            .query(query)
+            .bind(("tenant_id", tenant_id))
+            .bind(("limit", limit))
+            .bind(("start", start))
+            .await?
+            .take(0)?;
+        Ok(result)
+    }
+
+    async fn count_by_tenant(&self, tenant_id: &str) -> Result<u64> {
+        let query = "
+            SELECT count() FROM index_record 
+            WHERE tenant_id = $tenant_id 
+            GROUP ALL
+        ";
+        let result: Vec<serde_json::Value> = self
+            .db
+            .query(query)
+            .bind(("tenant_id", tenant_id))
+            .await?
+            .take(0)?;
+        Ok(result
+            .first()
+            .and_then(|v| v.get("count"))
+            .and_then(|c| c.as_u64())
+            .unwrap_or(0))
     }
 }

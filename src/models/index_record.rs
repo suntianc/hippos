@@ -13,6 +13,9 @@ pub struct IndexRecord {
     /// 会话ID（用于快速过滤）
     pub session_id: String,
 
+    /// 租户ID（用于多租户隔离）
+    pub tenant_id: String,
+
     /// 摘要文本
     pub gist: String,
 
@@ -47,6 +50,7 @@ impl IndexRecord {
         Self {
             turn_id: turn_id.to_string(),
             session_id: session_id.to_string(),
+            tenant_id: String::new(),
             gist: gist.to_string(),
             topics: Vec::new(),
             tags: Vec::new(),
@@ -84,6 +88,7 @@ impl IndexRecord {
 struct IndexRecordHelper {
     turn_id: String,
     session_id: String,
+    tenant_id: String,
     gist: String,
     topics: Vec<String>,
     tags: Vec<String>,
@@ -98,6 +103,7 @@ impl From<IndexRecordHelper> for IndexRecord {
         IndexRecord {
             turn_id: helper.turn_id,
             session_id: helper.session_id,
+            tenant_id: helper.tenant_id,
             gist: helper.gist,
             topics: helper.topics,
             tags: helper.tags,
@@ -114,6 +120,7 @@ impl From<IndexRecord> for IndexRecordHelper {
         IndexRecordHelper {
             turn_id: record.turn_id,
             session_id: record.session_id,
+            tenant_id: record.tenant_id,
             gist: record.gist,
             topics: record.topics,
             tags: record.tags,

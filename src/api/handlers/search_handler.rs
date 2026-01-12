@@ -1,6 +1,6 @@
 use axum::{
     Json,
-    extract::{Path, Query, State},
+    extract::{Extension, Path, Query, State},
     response::IntoResponse,
 };
 use serde::Deserialize;
@@ -9,6 +9,7 @@ use tracing::debug;
 use crate::{
     api::{app_state::AppState, dto::search_dto::*},
     error::AppError,
+    security::auth::Claims,
 };
 
 #[derive(Deserialize)]
@@ -24,6 +25,7 @@ pub struct RecentContextParams {
 
 pub async fn semantic_search(
     State(state): State<AppState>,
+    Extension(claims): Extension<Claims>,
     Path(session_id): Path<String>,
     Json(request): Json<SemanticSearchRequest>,
 ) -> Result<impl IntoResponse, AppError> {
@@ -34,6 +36,19 @@ pub async fn semantic_search(
 
     if request.query.is_empty() {
         return Err(AppError::Validation("Query cannot be empty".to_string()));
+    }
+
+    let session = state
+        .session_service
+        .get_by_id(&session_id)
+        .await
+        .map_err(|e| AppError::Database(e.to_string()))?
+        .ok_or_else(|| AppError::NotFound(format!("Session not found: {}", session_id)))?;
+
+    if session.tenant_id != claims.tenant_id {
+        return Err(AppError::Authorization(
+            "Access denied to session of another tenant".to_string(),
+        ));
     }
 
     let start_time = std::time::Instant::now();
@@ -71,6 +86,7 @@ pub async fn semantic_search(
 
 pub async fn hybrid_search(
     State(state): State<AppState>,
+    Extension(claims): Extension<Claims>,
     Path(session_id): Path<String>,
     Query(params): Query<HybridSearchQueryParams>,
 ) -> Result<impl IntoResponse, AppError> {
@@ -82,6 +98,19 @@ pub async fn hybrid_search(
 
     if query.is_empty() {
         return Err(AppError::Validation("Query cannot be empty".to_string()));
+    }
+
+    let session = state
+        .session_service
+        .get_by_id(&session_id)
+        .await
+        .map_err(|e| AppError::Database(e.to_string()))?
+        .ok_or_else(|| AppError::NotFound(format!("Session not found: {}", session_id)))?;
+
+    if session.tenant_id != claims.tenant_id {
+        return Err(AppError::Authorization(
+            "Access denied to session of another tenant".to_string(),
+        ));
     }
 
     let start_time = std::time::Instant::now();
@@ -119,10 +148,24 @@ pub async fn hybrid_search(
 
 pub async fn get_recent_context(
     State(state): State<AppState>,
+    Extension(claims): Extension<Claims>,
     Path(session_id): Path<String>,
     Query(params): Query<RecentContextParams>,
 ) -> Result<impl IntoResponse, AppError> {
     debug!("Getting recent context for session: {}", session_id);
+
+    let session = state
+        .session_service
+        .get_by_id(&session_id)
+        .await
+        .map_err(|e| AppError::Database(e.to_string()))?
+        .ok_or_else(|| AppError::NotFound(format!("Session not found: {}", session_id)))?;
+
+    if session.tenant_id != claims.tenant_id {
+        return Err(AppError::Authorization(
+            "Access denied to session of another tenant".to_string(),
+        ));
+    }
 
     let limit = params.limit.unwrap_or(10);
 

@@ -244,15 +244,11 @@ impl TurnService for TurnServiceImpl {
     }
 
     async fn identify_turn_groups(&self, session_id: &str) -> Result<Vec<TurnGroup>> {
-        let turns = self
+        let session_turns = self
             .repository
-            .list(1000, 0)
+            .list_by_session(session_id, 1000, 0)
             .await
             .map_err(|e| AppError::Database(e.to_string()))?;
-        let session_turns: Vec<Turn> = turns
-            .into_iter()
-            .filter(|t| t.session_id == session_id)
-            .collect();
 
         let mut groups = Vec::new();
         let mut current_group: Option<TurnGroup> = None;

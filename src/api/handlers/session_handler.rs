@@ -10,6 +10,7 @@ use tracing::debug;
 use crate::{
     api::{app_state::AppState, dto::session_dto::*},
     error::AppError,
+    models::session::SessionStatus,
     security::auth::Claims,
     services::session::{Pagination, SessionQuery},
 };
@@ -157,6 +158,7 @@ pub async fn get_session(
 
 pub async fn update_session(
     State(state): State<AppState>,
+    Extension(claims): Extension<Claims>,
     Path(id): Path<String>,
     Json(request): Json<UpdateSessionRequest>,
 ) -> Result<impl IntoResponse, AppError> {
@@ -168,6 +170,12 @@ pub async fn update_session(
         .await
         .map_err(|e| AppError::Database(e.to_string()))?
         .ok_or_else(|| AppError::NotFound(format!("Session not found: {}", id)))?;
+
+    if session.tenant_id != claims.tenant_id {
+        return Err(AppError::Authorization(
+            "Access denied to session of another tenant".to_string(),
+        ));
+    }
 
     if let Some(name) = request.name {
         session.name = name;
@@ -197,9 +205,23 @@ pub async fn update_session(
 
 pub async fn delete_session(
     State(state): State<AppState>,
+    Extension(claims): Extension<Claims>,
     Path(id): Path<String>,
 ) -> Result<impl IntoResponse, AppError> {
     debug!("Deleting session: {}", id);
+
+    let session = state
+        .session_service
+        .get_by_id(&id)
+        .await
+        .map_err(|e| AppError::Database(e.to_string()))?
+        .ok_or_else(|| AppError::NotFound(format!("Session not found: {}", id)))?;
+
+    if session.tenant_id != claims.tenant_id {
+        return Err(AppError::Authorization(
+            "Access denied to session of another tenant".to_string(),
+        ));
+    }
 
     state
         .session_service
@@ -223,7 +245,6 @@ pub async fn archive_session(
 ) -> Result<impl IntoResponse, AppError> {
     debug!("Archiving session: {}", id);
 
-    // 验证会话存在且属于当前租户
     let session = state
         .session_service
         .get_by_id(&id)
@@ -234,6 +255,12 @@ pub async fn archive_session(
     if session.tenant_id != claims.tenant_id {
         return Err(AppError::Authorization(
             "Access denied to session of another tenant".to_string(),
+        ));
+    }
+
+    if session.status == SessionStatus::Archived {
+        return Err(AppError::Validation(
+            "Session is already archived".to_string(),
         ));
     }
 
@@ -261,7 +288,6 @@ pub async fn restore_session(
 ) -> Result<impl IntoResponse, AppError> {
     debug!("Restoring session: {}", id);
 
-    // 验证会话存在且属于当前租户
     let session = state
         .session_service
         .get_by_id(&id)
@@ -272,6 +298,12 @@ pub async fn restore_session(
     if session.tenant_id != claims.tenant_id {
         return Err(AppError::Authorization(
             "Access denied to session of another tenant".to_string(),
+        ));
+    }
+
+    if session.status != SessionStatus::Archived {
+        return Err(AppError::Validation(
+            "Only archived sessions can be restored".to_string(),
         ));
     }
 

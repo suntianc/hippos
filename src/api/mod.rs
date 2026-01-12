@@ -11,10 +11,12 @@ pub mod routes;
 
 use crate::api::app_state::AppState;
 use crate::error::AppError;
-use crate::security::middleware::security_headers_middleware;
+use crate::security::middleware::{auth_middleware, security_headers_middleware};
 use axum::Router;
 
 pub fn create_router(app_state: AppState) -> Router {
+    let authenticator = app_state.authenticator.clone();
+
     let api = Router::new()
         .merge(routes::session_routes::create_session_router())
         .merge(routes::turn_routes::create_turn_router())
@@ -22,8 +24,10 @@ pub fn create_router(app_state: AppState) -> Router {
 
     Router::new()
         .nest("/api/v1", api)
-        // Add security headers middleware to all routes
         .layer(axum::middleware::from_fn(security_headers_middleware))
+        .layer(axum::middleware::from_fn(move |req, next| {
+            auth_middleware(req, next, authenticator.clone())
+        }))
         .with_state(app_state)
 }
 
