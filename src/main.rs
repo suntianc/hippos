@@ -36,14 +36,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("Repositories initialized");
 
     let embedding_model_for_index =
-        create_embedding_model(&config.embedding.model_name, config.vector.dimension).await?;
+        create_embedding_model(&config.embedding, config.vector.dimension).await?;
     info!(
-        "Embedding model initialized: {}",
-        config.embedding.model_name
+        "Embedding model initialized: {} (backend: {})",
+        config.embedding.model_name, config.embedding.backend
     );
 
     let embedding_model_for_retrieval =
-        create_embedding_model(&config.embedding.model_name, config.vector.dimension).await?;
+        create_embedding_model(&config.embedding, config.vector.dimension).await?;
 
     let index_service = create_unified_index_service(
         hippos::index::create_vector_index(None, false),

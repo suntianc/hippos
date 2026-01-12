@@ -1,59 +1,52 @@
-# Hippos 配置文件
+app_name = "hippos"
+environment = "development"
 
-# 应用配置
-app:
-  name: "hippos"
-  environment: "development"
+[database]
+url = "ws://127.0.0.1:12470"
+namespace = "hippos"
+database = "sessions"
+username = "root"
+password = "root"
+min_connections = 5
+max_connections = 50
+connection_timeout = 30
+idle_timeout = 300
 
-# 数据库配置
-database:
-  url: "ws://localhost:8000"
-  namespace: "hippos"
-  database: "sessions"
-  username: "root"
-  password: "root"
-  min_connections: 5
-  max_connections: 50
-  connection_timeout: 30
-  idle_timeout: 300
+[vector]
+data_dir = "./data/lancedb"
+dimension = 384
+nlist = 1024
+nprobe = 32
+pq_m = 8
+distance_type = "cosine"
 
-# 向量数据库配置
-vector:
-  data_dir: "./data/lancedb"
-  dimension: 384
-  nlist: 1024
-  nprobe: 32
-  pq_m: 8
-  distance_type: "cosine"
+[server]
+host = "0.0.0.0"
+port = 8080
+workers = 4
+request_timeout = 30
+max_request_size = 10485760
 
-# 服务器配置
-server:
-  host: "0.0.0.0"
-  port: 8080
-  workers: 4
-  request_timeout: 30
-  max_request_size: 10485760
+[security]
+api_key = "dev-api-key"
+rate_limit_enabled = false
+global_rate_limit = 1000
+per_session_rate_limit = 100
+redis_url = "redis://localhost:6379"
+tls_enabled = false
 
-# 安全配置
-security:
-  api_key: "dev-api-key-change-in-production"
-  rate_limit_enabled: false
-  global_rate_limit: 1000
-  per_session_rate_limit: 100
-  redis_url: "redis://localhost:6379"
-  tls_enabled: false
+[logging]
+level = "debug"
+structured = true
+log_dir = "./logs"
+file_max_size = 104857600
+file_max_count = 10
 
-# 日志配置
-logging:
-  level: "debug"
-  structured: true
-  log_dir: "./logs"
-  file_max_size: 104857600
-  file_max_count: 10
-
-# 嵌入模型配置
-embedding:
-  model_name: "all-MiniLM-L6-v2"
-  model_path: null
-  batch_size: 32
-  use_gpu: false
+[embedding]
+model_name = "mxbai-embed-large"
+model_path = ""
+batch_size = 32
+use_gpu = false
+backend = "simple"
+ollama_url = "http://localhost:11434"
+ollama_timeout = 60

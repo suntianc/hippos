@@ -43,7 +43,12 @@ pub async fn run_mcp_server() -> Result<(), Box<dyn std::error::Error>> {
     let turn_repository = std::sync::Arc::new(crate::storage::repository::TurnRepository::new(
         db_pool.inner().await,
     ));
-    let embedding_model = create_embedding_model("all-MiniLM-L6-v2", 384).await?;
+    let embedding_config = crate::config::config::EmbeddingConfig {
+        model_name: "all-MiniLM-L6-v2".into(),
+        backend: "simple".into(),
+        ..Default::default()
+    };
+    let embedding_model = create_embedding_model(&embedding_config, 384).await?;
     let retrieval_service = create_retrieval_service(embedding_model, turn_repository);
 
     // Create AppState-like structure for the MCP server

@@ -109,6 +109,12 @@ pub struct EmbeddingConfig {
     pub batch_size: usize,
     /// 是否使用 GPU
     pub use_gpu: bool,
+    /// Embedding 后端类型: "ollama" 或 "simple"
+    pub backend: String,
+    /// Ollama 服务器地址
+    pub ollama_url: String,
+    /// Ollama 请求超时（秒）
+    pub ollama_timeout: u64,
 }
 
 /// 应用配置
@@ -185,6 +191,9 @@ impl AppConfig {
                 model_path: None,
                 batch_size: 32,
                 use_gpu: false,
+                backend: "simple".into(),
+                ollama_url: "http://localhost:11434".into(),
+                ollama_timeout: 60,
             },
             app_name: "hippos".into(),
             environment: "development".into(),

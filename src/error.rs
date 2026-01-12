@@ -94,6 +94,12 @@ impl From<surrealdb::Error> for AppError {
     }
 }
 
+impl From<reqwest::Error> for AppError {
+    fn from(e: reqwest::Error) -> Self {
+        AppError::Connection(e.to_string())
+    }
+}
+
 /// Axum response implementation for AppError
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
