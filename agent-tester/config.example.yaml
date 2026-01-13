@@ -1,0 +1,47 @@
+# Hippos Configuration
+hippos_url: "http://localhost:8080"
+hippos_api_key: "dev-api-key"
+
+# LLM Configuration
+default_llm: openai
+
+llms:
+  openai:
+    provider: "openai"
+    api_key: "sk-your-openai-api-key"
+    model: "gpt-4o"
+    base_url: null
+    max_tokens: 4096
+    temperature: 0.7
+  
+  anthropic:
+    provider: "anthropic"
+    api_key: "sk-ant-your-anthropic-api-key"
+    model: "claude-3-5-sonnet-20241022"
+    max_tokens: 4096
+    temperature: 0.7
+
+# System Prompt Template
+# Available placeholders: {session_id}, {context}
+system_prompt_template: |
+  You are a helpful AI assistant specialized in software development.
+  
+  Current session ID: {session_id}
+  
+  Context from previous conversations:
+  {context}
+  
+  Guidelines:
+  - Answer based on the context above
+  - If context is insufficient, ask for clarification
+  - Use tools when appropriate for factual queries
+
+# Context Settings
+context_max_length: 2000
+max_history_turns: 10
+
+# MCP Servers (optional)
+# mcp_servers:
+#   - name: weather
+#     command: "uvx"
+#     args: ["mcp-server-weather"]

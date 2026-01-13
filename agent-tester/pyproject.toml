@@ -1,0 +1,84 @@
+[project]
+name = "agent-tester"
+version = "0.1.0"
+description = "A smart agent application to test hippos functionality with multi-round dialogue and dynamic system prompt injection"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "Hippos Team"}
+]
+keywords = ["agent", "mcp", "llm", "hippos", "conversation"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+dependencies = [
+    # LLM Clients
+    "openai>=1.0.0",
+    "anthropic>=0.40.0",
+
+    # MCP Protocol
+    "mcp>=0.2.0",
+
+    # HTTP Client
+    "httpx>=0.27.0",
+    "aiohttp>=3.9.0",
+
+    # Configuration
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
+    "pyyaml>=6.0.0",
+    "python-dotenv>=1.0.0",
+
+    # Async utilities
+    "anyio>=4.0.0",
+    "asyncio-throttle>=1.0.0",
+
+    # CLI
+    "rich>=13.0.0",
+    "click>=8.0.0",
+
+    # Testing
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+    "pytest-httpx>=0.30.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.5.0",
+    "mypy>=1.10.0",
+    "pre-commit>=4.0.0",
+]
+
+[project.scripts]
+agent-tester = "agent_tester.cli:main"
+agent-chat = "agent_tester.chat:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agent_tester"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "W"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_ignores = true
+disallow_untyped_defs = false
