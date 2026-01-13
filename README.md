@@ -9,7 +9,7 @@ Hippos is a Rust-based context management service designed to provide persistent
 ### Prerequisites
 
 - **Rust**: 1.70.0 or later (2024 Edition)
-- **SurrealDB**: 1.5.6 or later (optional, in-memory mode available)
+- **SurrealDB**: 2.0.0 or later (uses HTTP REST API, not WebSocket SDK)
 - **Cargo**: Latest stable version
 
 ### Installation
@@ -130,7 +130,8 @@ curl http://localhost:8080/health
 │  ┌───────────────────────────────────────────────────────────┐ │
 │  │                    Storage Layer                           │ │
 │  │  ┌──────────────────────────────────────────────────────┐  │ │
-│  │  │              SurrealDB Connection Pool               │  │ │
+│  │  │              SurrealDB HTTP API Layer                │  │ │
+│  │  │         (reqwest client with connection pool)        │  │ │
 │  │  └──────────────────────────────────────────────────────┘  │ │
 │  └───────────────────────────────────────────────────────────┘ │
 │                         │                                       │
@@ -155,7 +156,7 @@ curl http://localhost:8080/health
 | **Turn Service** | Turn storage and retrieval, statistics tracking |
 | **Retrieval Service** | Vector and hybrid search operations |
 | **Dehydration Service** | Content summarization and context compression |
-| **Storage Layer** | Database connection pooling, repository pattern |
+| **Storage Layer** | SurrealDB HTTP API client, connection pooling, repository pattern |
 | **Index Layer** | Vector embeddings, full-text search, in-memory indexing |
 
 ### Data Flow
@@ -583,7 +584,7 @@ app:
 
 # Database Configuration
 database:
-  url: "ws://localhost:8000"
+  url: "ws://localhost:8000"  # WebSocket URL (internally converted to HTTP API)
   namespace: "hippos"
   database: "sessions"
   username: "root"
@@ -592,47 +593,6 @@ database:
   max_connections: 50
   connection_timeout: 30
   idle_timeout: 300
-
-# Vector Database Configuration
-vector:
-  data_dir: "./data/lancedb"
-  dimension: 384
-  nlist: 1024
-  nprobe: 32
-  pq_m: 8
-  distance_type: "cosine"
-
-# Server Configuration
-server:
-  host: "0.0.0.0"
-  port: 8080
-  workers: 4
-  request_timeout: 30
-  max_request_size: 10485760
-
-# Security Configuration
-security:
-  api_key: "dev-api-key-change-in-production"
-  rate_limit_enabled: false
-  global_rate_limit: 1000
-  per_session_rate_limit: 100
-  redis_url: "redis://localhost:6379"
-  tls_enabled: false
-
-# Logging Configuration
-logging:
-  level: "debug"
-  structured: true
-  log_dir: "./logs"
-  file_max_size: 104857600
-  file_max_count: 10
-
-# Embedding Model Configuration
-embedding:
-  model_name: "all-MiniLM-L6-v2"
-  model_path: null
-  batch_size: 32
-  use_gpu: false
 ```
 
 ### Environment Variables
@@ -641,8 +601,8 @@ embedding:
 |----------|---------|-------------|
 | `EXOCORTEX_APP_NAME` | `hippos` | Application name |
 | `EXOCORTEX_ENVIRONMENT` | `development` | Environment mode |
-| `EXOCORTEX_DATABASE_URL` | `ws://localhost:8000` | SurrealDB connection URL |
-| `EXOCORTEX_DATABASE_NAMESPACE` | `hippos` | Database namespace |
+| `EXOCORTEX_DATABASE_URL` | `ws://localhost:8000` | SurrealDB connection URL (converted to HTTP API internally) |
+| `EXOCORTEX_DATABASE_NAMESPACE` | `hippos` | Database namespace (passed via `surreal-ns` header) |
 | `EXOCORTEX_DATABASE_NAME` | `sessions` | Database name |
 | `EXOCORTEX_SERVER_HOST` | `0.0.0.0` | Server bind address |
 | `EXOCORTEX_SERVER_PORT` | `8080` | Server port |
@@ -657,15 +617,17 @@ embedding:
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `url` | String | `ws://localhost:8000` | SurrealDB WebSocket URL |
-| `namespace` | String | `hippos` | Database namespace |
-| `database` | String | `sessions` | Database name |
+| `url` | String | `ws://localhost:8000` | SurrealDB WebSocket URL (converted to HTTP API internally) |
+| `namespace` | String | `hippos` | Database namespace (sent via `surreal-ns` header) |
+| `database` | String | `sessions` | Database name (sent via `surreal-db` header) |
 | `username` | String | `root` | Authentication username |
 | `password` | String | `root` | Authentication password |
 | `min_connections` | usize | `5` | Minimum connection pool size |
 | `max_connections` | usize | `50` | Maximum connection pool size |
 | `connection_timeout` | u64 | `30` | Connection timeout in seconds |
 | `idle_timeout` | u64 | `300` | Idle connection timeout in seconds |
+
+> **Note**: Hippos uses SurrealDB's HTTP REST API (not the WebSocket SDK) for database operations. The URL in the config can use either `ws://` or `http://` format - it will be automatically converted to use the HTTP endpoint `/sql` for queries. Namespace and database are passed via lowercase headers (`surreal-ns` and `surreal-db`).
 
 #### Vector Configuration
 
@@ -931,7 +893,7 @@ Add to your Cursor MCP configuration:
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `HIPPOS_MCP_MODE` | `0` | Set to `1` to enable MCP stdio server mode |
-| `EXOCORTEX_DATABASE_URL` | `ws://localhost:8000` | SurrealDB connection URL |
+| `EXOCORTEX_DATABASE_URL` | `ws://localhost:8000` | SurrealDB connection URL (HTTP API used internally) |
 | `EXOCORTEX_API_KEY` | `dev-api-key` | API key for authentication |
 
 ## 🔒 Security
@@ -1199,7 +1161,8 @@ cargo bench search_latency
 | Dependency | Version | Purpose |
 |------------|---------|---------|
 | `axum` | 0.7 | Web framework |
-| `surrealdb` | 1.0 | Database |
+| `surrealdb` | 2.0 | Database (HTTP REST API) |
+| `reqwest` | 0.11 | HTTP client for SurrealDB API |
 | `tokio` | 1.35 | Async runtime |
 | `tracing` | 0.1 | Structured logging |
 | `serde` | 1.0 | Serialization |

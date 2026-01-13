@@ -213,3 +213,146 @@ impl Default for ContentStatus {
         ContentStatus::Pending
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::TimeZone;
+    use serde_json;
+
+    #[test]
+    fn test_message_type_default() {
+        assert_eq!(MessageType::default(), MessageType::User);
+    }
+
+    #[test]
+    fn test_content_status_default() {
+        assert_eq!(ContentStatus::default(), ContentStatus::Pending);
+    }
+
+    #[test]
+    fn test_turn_metadata_default() {
+        let metadata = TurnMetadata::default();
+        assert!(metadata.user_id.is_none());
+        assert!(metadata.role.is_none());
+        assert!(metadata.model.is_none());
+        assert!(metadata.token_count.is_none());
+        assert!(metadata.custom.is_empty());
+        assert_eq!(metadata.message_type, MessageType::User);
+    }
+
+    #[test]
+    fn test_dehydrated_data_default() {
+        let data = DehydratedData::default();
+        assert!(data.gist.is_empty());
+        assert!(data.topics.is_empty());
+        assert!(data.tags.is_empty());
+        assert!(data.embedding.is_none());
+        assert!(data.generator.is_none());
+    }
+
+    #[test]
+    fn test_turn_serialization_roundtrip() {
+        let turn = Turn {
+            id: "turn:test123".to_string(),
+            session_id: "session:abc".to_string(),
+            turn_number: 1,
+            raw_content: "Hello, world!".to_string(),
+            metadata: TurnMetadata {
+                timestamp: Utc::now(),
+                user_id: Some("user123".to_string()),
+                message_type: MessageType::User,
+                role: Some("user".to_string()),
+                model: None,
+                token_count: Some(50),
+                custom: HashMap::new(),
+            },
+            dehydrated: None,
+            status: ContentStatus::Pending,
+            parent_id: None,
+            children_ids: vec![],
+        };
+
+        let serialized = serde_json::to_string(&turn).unwrap();
+        let deserialized: Turn = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(turn.id, deserialized.id);
+        assert_eq!(turn.session_id, deserialized.session_id);
+        assert_eq!(turn.turn_number, deserialized.turn_number);
+        assert_eq!(turn.raw_content, deserialized.raw_content);
+    }
+
+    #[test]
+    fn test_turn_with_children() {
+        let turn = Turn {
+            id: "turn:parent".to_string(),
+            session_id: "session:abc".to_string(),
+            turn_number: 1,
+            raw_content: "Parent turn".to_string(),
+            metadata: TurnMetadata::default(),
+            dehydrated: None,
+            status: ContentStatus::Indexed,
+            parent_id: None,
+            children_ids: vec!["turn:child1".to_string(), "turn:child2".to_string()],
+        };
+
+        assert_eq!(turn.children_ids.len(), 2);
+        assert!(turn.children_ids.contains(&"turn:child1".to_string()));
+    }
+
+    #[test]
+    fn test_turn_helper_conversion() {
+        let turn = Turn {
+            id: "turn:test".to_string(),
+            session_id: "session:abc".to_string(),
+            turn_number: 5,
+            raw_content: "Test content".to_string(),
+            metadata: TurnMetadata::default(),
+            dehydrated: Some(DehydratedData {
+                gist: "Test gist".to_string(),
+                topics: vec!["test".to_string()],
+                tags: vec!["tag1".to_string()],
+                embedding: None,
+                generated_at: Utc::now(),
+                generator: Some("test".to_string()),
+            }),
+            status: ContentStatus::Indexed,
+            parent_id: Some("turn:parent".to_string()),
+            children_ids: vec!["turn:child".to_string()],
+        };
+
+        let helper: TurnHelper = turn.clone().into();
+        assert_eq!(helper.id, "turn:test");
+        assert_eq!(helper.session_id, "session:abc");
+        assert_eq!(helper.turn_number, 5);
+        assert!(helper.dehydrated.is_some());
+        assert_eq!(helper.parent_id, Some("turn:parent".to_string()));
+        assert_eq!(helper.children_ids.len(), 1);
+    }
+
+    #[test]
+    fn test_message_type_serialization() {
+        let user = serde_json::to_string(&MessageType::User).unwrap();
+        let assistant = serde_json::to_string(&MessageType::Assistant).unwrap();
+        let system = serde_json::to_string(&MessageType::System).unwrap();
+
+        // Enum variants are serialized as lowercase strings
+        assert!(user.contains("User") || user.contains("user"));
+        assert!(assistant.contains("Assistant") || assistant.contains("assistant"));
+        assert!(system.contains("System") || system.contains("system"));
+    }
+
+    #[test]
+    fn test_content_status_serialization() {
+        let pending = serde_json::to_string(&ContentStatus::Pending).unwrap();
+        let indexed = serde_json::to_string(&ContentStatus::Indexed).unwrap();
+        let archived = serde_json::to_string(&ContentStatus::Archived).unwrap();
+        let processing = serde_json::to_string(&ContentStatus::Processing).unwrap();
+
+        // Just verify they serialize to strings
+        assert!(pending.starts_with('"'));
+        assert!(indexed.starts_with('"'));
+        assert!(archived.starts_with('"'));
+        assert!(processing.starts_with('"'));
+    }
+}

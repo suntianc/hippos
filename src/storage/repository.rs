@@ -1,11 +1,10 @@
 use async_trait::async_trait;
-use std::collections::HashMap;
 use std::marker::PhantomData;
 use surrealdb::{Surreal, engine::any::Any};
 
 use crate::error::Result;
 use crate::models::index_record::IndexRecord;
-use crate::models::session::{Session, SessionConfig, SessionStats};
+use crate::models::session::Session;
 use crate::models::turn::Turn;
 use crate::storage::surrealdb::SurrealPool;
 
@@ -416,7 +415,7 @@ impl Repository<Session> for SessionRepository {
             .header("Accept", "application/json")
             .header("Content-Type", "application/x-www-form-urlencoded")
             .basic_auth(&config.username, Some(&config.password))
-            .body(query.clone())
+            .body(query)
             .send()
             .await
             .map_err(|e| crate::error::AppError::Database(format!("HTTP request failed: {}", e)))?;

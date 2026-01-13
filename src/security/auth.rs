@@ -267,7 +267,7 @@ impl Authenticator for ApiKeyAuth {
 #[derive(Debug, Clone)]
 pub struct JwtAuth {
     /// Secret key for encoding
-    encoding_key: EncodingKey,
+    _encoding_key: EncodingKey,
     /// Secret key for decoding
     decoding_key: DecodingKey,
     /// JWT issuer
@@ -275,7 +275,7 @@ pub struct JwtAuth {
     /// JWT audience
     audience: String,
     /// Token expiry time in seconds
-    expiry_seconds: u64,
+    _expiry_seconds: u64,
     /// Whether authentication is enabled
     enabled: bool,
 }
@@ -287,11 +287,11 @@ impl JwtAuth {
         let decoding_key = DecodingKey::from_secret(secret.as_bytes());
 
         Self {
-            encoding_key,
+            _encoding_key: encoding_key,
             decoding_key,
             issuer,
             audience,
-            expiry_seconds,
+            _expiry_seconds: expiry_seconds,
             enabled: true,
         }
     }
