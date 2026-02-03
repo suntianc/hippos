@@ -832,4 +832,435 @@ Hippos implements Token Bucket rate limiting:
 
 ---
 
-*Last Updated: 2024-01-11*
+## Memory Service API (New)
+
+### Overview
+
+The Memory Service provides comprehensive memory management for AI agents, including:
+- Multi-type memory storage (episodic, semantic, procedural, profile)
+- User profile management with facts and preferences
+- Pattern library for problem-solution patterns
+- Knowledge graph with entities and relationships
+- Real-time WebSocket subscriptions
+
+### Base URL
+
+```
+http://localhost:3000/api/v1
+```
+
+### Authentication
+
+All endpoints require Bearer token authentication:
+
+```
+Authorization: Bearer <token>
+```
+
+---
+
+### Memories API
+
+#### Create Memory
+
+Create a new memory.
+
+**Endpoint:** `POST /api/v1/memories`
+
+**Request Body:**
+
+```json
+{
+  "user_id": "user123",
+  "memory_type": "episodic",
+  "content": "User prefers dark mode interface",
+  "source": "conversation",
+  "importance": 0.8,
+  "tags": ["preference", "ui"]
+}
+```
+
+**Response (201 Created):**
+
+```json
+{
+  "id": "memory_abc123",
+  "memory_type": "episodic",
+  "gist": "User prefers dark mode",
+  "importance": 0.8,
+  "created_at": "2024-01-15T10:30:00Z"
+}
+```
+
+---
+
+#### List Memories
+
+List memories with pagination.
+
+**Endpoint:** `GET /api/v1/memories`
+
+**Query Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `user_id` | string | - | Filter by user ID |
+| `page` | integer | 1 | Page number |
+| `page_size` | integer | 20 | Items per page |
+
+**Response (200 OK):**
+
+```json
+{
+  "memories": [
+    {
+      "id": "memory_abc123",
+      "memory_type": "episodic",
+      "gist": "User prefers dark mode",
+      "importance": 0.8,
+      "created_at": "2024-01-15T10:30:00Z"
+    }
+  ],
+  "total": 1,
+  "page": 1,
+  "page_size": 20
+}
+```
+
+---
+
+#### Search Memories
+
+Search memories using hybrid search (semantic + keyword).
+
+**Endpoint:** `POST /api/v1/memories/search`
+
+**Request Body:**
+
+```json
+{
+  "user_id": "user123",
+  "memory_types": ["episodic", "semantic"],
+  "keyword": "dark mode",
+  "min_importance": 0.5,
+  "page": 1,
+  "page_size": 20
+}
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "memories": [
+    {
+      "id": "memory_abc123",
+      "memory_type": "episodic",
+      "content": "User prefers dark mode interface",
+      "gist": "User prefers dark mode",
+      "importance": 0.8,
+      "score": 0.95
+    }
+  ],
+  "total": 1,
+  "search_time_ms": 15
+}
+```
+
+---
+
+#### Get Memory Statistics
+
+Get memory statistics for a user.
+
+**Endpoint:** `GET /api/v1/memories/stats`
+
+**Query Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `user_id` | string | User ID (required) |
+
+**Response (200 OK):**
+
+```json
+{
+  "total_count": 150,
+  "episodic_count": 50,
+  "semantic_count": 60,
+  "procedural_count": 30,
+  "profile_count": 10,
+  "active_count": 145,
+  "archived_count": 5,
+  "avg_importance": 0.65
+}
+```
+
+---
+
+### Profiles API
+
+#### Create Profile
+
+Create a new user profile.
+
+**Endpoint:** `POST /api/v1/profiles`
+
+**Request Body:**
+
+```json
+{
+  "user_id": "user123",
+  "name": "John Doe",
+  "role": "Software Engineer",
+  "organization": "Acme Corp",
+  "tools_used": ["VS Code", "Git", "Docker"]
+}
+```
+
+---
+
+#### Get Profile
+
+Get a user profile by ID.
+
+**Endpoint:** `GET /api/v1/profiles/:id`
+
+**Response (200 OK):**
+
+```json
+{
+  "id": "profile_abc123",
+  "user_id": "user123",
+  "name": "John Doe",
+  "role": "Software Engineer",
+  "preferences": {
+    "theme": "dark",
+    "language": "en-US"
+  },
+  "facts": [
+    {
+      "id": "fact_xyz789",
+      "fact": "Prefers dark mode",
+      "category": "technical",
+      "confidence": 0.9,
+      "verified": true
+    }
+  ],
+  "tools_used": ["VS Code", "Git", "Docker"],
+  "confidence": 0.85
+}
+```
+
+---
+
+#### Add Fact
+
+Add a fact to a profile.
+
+**Endpoint:** `POST /api/v1/profiles/:id/facts`
+
+**Request Body:**
+
+```json
+{
+  "fact": "Works primarily on backend systems",
+  "category": "professional",
+  "source_memory_id": "memory_abc123",
+  "confidence": 0.8
+}
+```
+
+---
+
+### Patterns API
+
+#### Create Pattern
+
+Create a new problem-solution pattern.
+
+**Endpoint:** `POST /api/v1/patterns`
+
+**Request Body:**
+
+```json
+{
+  "pattern_type": "problem_solution",
+  "name": "Database Connection Pooling",
+  "description": "Standard pattern for database connection management",
+  "problem": "Database connections are expensive to create",
+  "solution": "Use connection pooling with a fixed number of connections",
+  "tags": ["database", "performance"],
+  "is_public": true
+}
+```
+
+---
+
+#### Match Patterns
+
+Match patterns against input text.
+
+**Endpoint:** `POST /api/v1/patterns/match`
+
+**Request Body:**
+
+```json
+{
+  "input": "How do I handle database connections efficiently?",
+  "max_matches": 5
+}
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "patterns": [
+    {
+      "id": "pattern_abc123",
+      "name": "Database Connection Pooling",
+      "score": 0.92,
+      "solution": "Use connection pooling..."
+    }
+  ]
+}
+```
+
+---
+
+### Entities API
+
+#### Create Entity
+
+Create a new entity for the knowledge graph.
+
+**Endpoint:** `POST /api/v1/entities`
+
+**Request Body:**
+
+```json
+{
+  "name": "PostgreSQL",
+  "entity_type": "tool",
+  "description": "Open source relational database",
+  "aliases": ["Postgres", "pg"],
+  "properties": {
+    "version": "15.0",
+    "license": "PostgreSQL License"
+  }
+}
+```
+
+---
+
+#### Query Knowledge Graph
+
+Query the knowledge graph from a center entity.
+
+**Endpoint:** `POST /api/v1/entities/graph`
+
+**Request Body:**
+
+```json
+{
+  "center_entity_id": "entity123",
+  "max_depth": 2,
+  "limit_per_depth": 10,
+  "min_strength": 0.3
+}
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "entities": [
+    {
+      "id": "entity123",
+      "name": "PostgreSQL",
+      "entity_type": "tool"
+    }
+  ],
+  "relationships": [
+    {
+      "source_entity_id": "entity123",
+      "target_entity_id": "entity456",
+      "relationship_type": "uses",
+      "strength": 0.9
+    }
+  ]
+}
+```
+
+---
+
+### WebSocket API
+
+#### Connection
+
+Connect to WebSocket at: `ws://localhost:3000/ws`
+
+**Authentication:** Include token in query parameter or header
+
+```
+ws://localhost:3000/ws?token=<bearer_token>
+```
+
+#### Subscribe to Events
+
+```json
+{
+  "action": "subscribe",
+  "topics": ["memory:*", "profile:updated"]
+}
+```
+
+#### Supported Topics
+
+| Topic | Description |
+|-------|-------------|
+| `memory:created` | New memory created |
+| `memory:updated` | Memory updated |
+| `memory:deleted` | Memory deleted |
+| `memory:*` | All memory events |
+| `profile:updated` | Profile updated |
+| `pattern:created` | New pattern created |
+| `entity:created` | New entity created |
+| `*` | All events |
+
+#### Event Format
+
+```json
+{
+  "type": "event",
+  "topic": "memory:created",
+  "data": {
+    "id": "memory123",
+    "memory_type": "episodic"
+  }
+}
+```
+
+---
+
+## Quick Reference (Memory Service)
+
+| Category | Method | Endpoint | Description |
+|----------|--------|----------|-------------|
+| **Memories** | POST | `/api/v1/memories` | Create memory |
+| | GET | `/api/v1/memories` | List memories |
+| | POST | `/api/v1/memories/search` | Search memories |
+| | GET | `/api/v1/memories/stats` | Get statistics |
+| **Profiles** | POST | `/api/v1/profiles` | Create profile |
+| | GET | `/api/v1/profiles/:id` | Get profile |
+| | POST | `/api/v1/profiles/:id/facts` | Add fact |
+| **Patterns** | POST | `/api/v1/patterns` | Create pattern |
+| | POST | `/api/v1/patterns/match` | Match patterns |
+| **Entities** | POST | `/api/v1/entities` | Create entity |
+| | POST | `/api/v1/entities/graph` | Query graph |
+| **WebSocket** | WS | `/ws` | Real-time events |
+
+---
+
+*Memory Service API documentation added: 2024-02-03*
