@@ -2,8 +2,22 @@
 //!
 //! Provides a simplified MCP (Model Context Protocol) server that exposes
 //! search capabilities for the Hippos context management service.
+//!
+//! Supports stdio transport for local MCP clients and SSE transport
+//! for remote MCP clients over HTTP.
 
 pub mod server;
+pub mod sse_server;
+
+use crate::config::config::DatabaseConfig;
+use crate::index::create_embedding_model;
+use crate::services::retrieval::create_retrieval_service;
+use crate::storage::repository::TurnRepository;
+use crate::storage::surrealdb::SurrealPool;
+use rmcp::{ServiceExt, transport::stdio};
+use server::HipposMcpServer;
+use std::sync::Arc;
+use tracing::info;
 
 /// MCP Server Configuration
 #[derive(Debug, Clone)]
@@ -28,22 +42,10 @@ impl Default for McpServerConfig {
 
 /// Run the MCP server with stdio transport
 pub async fn run_mcp_server() -> Result<(), Box<dyn std::error::Error>> {
-    use crate::config::config::DatabaseConfig;
-    use crate::index::create_embedding_model;
-    use crate::services::retrieval::create_retrieval_service;
-    use crate::storage::surrealdb::SurrealPool;
-    use rmcp::{ServiceExt, transport::stdio};
-    use server::HipposMcpServer;
-    use tracing::info;
-
     info!("Initializing MCP server...");
 
-    // Create services in correct order
     let db_pool = SurrealPool::new(DatabaseConfig::default()).await?;
-    let turn_repository = std::sync::Arc::new(crate::storage::repository::TurnRepository::new(
-        db_pool.inner().await,
-        db_pool.clone(),
-    ));
+    let turn_repository = Arc::new(TurnRepository::new(db_pool.inner().await, db_pool.clone()));
     let embedding_config = crate::config::config::EmbeddingConfig {
         model_name: "all-MiniLM-L6-v2".into(),
         backend: "simple".into(),
@@ -51,11 +53,8 @@ pub async fn run_mcp_server() -> Result<(), Box<dyn std::error::Error>> {
     };
     let embedding_model = create_embedding_model(&embedding_config, 384).await?;
     let retrieval_service = create_retrieval_service(embedding_model, turn_repository);
+    let retrieval_service_arc = Arc::from(retrieval_service);
 
-    // Create AppState-like structure for the MCP server
-    let retrieval_service_arc = std::sync::Arc::from(retrieval_service);
-
-    // Create and run the MCP server
     info!("MCP server starting with stdio transport...");
 
     let mcp_server = HipposMcpServer::new(retrieval_service_arc)
@@ -65,7 +64,6 @@ pub async fn run_mcp_server() -> Result<(), Box<dyn std::error::Error>> {
             tracing::error!("MCP server error: {}", e);
         })?;
 
-    // Wait for server to complete
     mcp_server.waiting().await?;
 
     Ok(())
