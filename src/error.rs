@@ -3,9 +3,9 @@
 //! 定义应用程序的错误类型和错误处理逻辑。
 
 use axum::{
-    Json,
     http::StatusCode,
     response::{IntoResponse, Response},
+    Json,
 };
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -36,6 +36,10 @@ pub enum AppError {
     /// 参数验证错误
     #[error("参数验证失败: {0}")]
     Validation(String),
+
+    /// 资源冲突
+    #[error("资源冲突: {0}")]
+    Conflict(String),
 
     /// 速率限制
     #[error("请求过于频繁，请稍后再试")]
@@ -100,6 +104,18 @@ impl From<reqwest::Error> for AppError {
     }
 }
 
+impl From<std::string::String> for AppError {
+    fn from(e: std::string::String) -> Self {
+        AppError::Database(e)
+    }
+}
+
+impl From<regex::Error> for AppError {
+    fn from(e: regex::Error) -> Self {
+        AppError::Validation(format!("Regex error: {}", e))
+    }
+}
+
 /// Axum response implementation for AppError
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
@@ -158,6 +174,7 @@ impl From<&AppError> for (u16, String) {
             AppError::Authentication(_) => (401, "UNAUTHORIZED".to_string()),
             AppError::Authorization(_) => (403, "FORBIDDEN".to_string()),
             AppError::Validation(_) => (400, "BAD_REQUEST".to_string()),
+            AppError::Conflict(_) => (409, "CONFLICT".to_string()),
             AppError::RateLimited => (429, "RATE_LIMITED".to_string()),
             AppError::Timeout(_) => (408, "TIMEOUT".to_string()),
             AppError::Connection(_) => (503, "SERVICE_UNAVAILABLE".to_string()),

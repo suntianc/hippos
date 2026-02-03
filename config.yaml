@@ -12,17 +12,9 @@ max_connections = 50
 connection_timeout = 30
 idle_timeout = 300
 
-[vector]
-data_dir = "./data/lancedb"
-dimension = 384
-nlist = 1024
-nprobe = 32
-pq_m = 8
-distance_type = "cosine"
-
 [server]
 host = "0.0.0.0"
-port = 8080
+port = 12730
 workers = 4
 request_timeout = 30
 max_request_size = 10485760

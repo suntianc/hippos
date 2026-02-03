@@ -1,15 +1,33 @@
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
+/// 数据库类型
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum DatabaseType {
+    /// SurrealDB
+    SurrealDB,
+    /// ArangoDB
+    ArangoDB,
+}
+
+impl Default for DatabaseType {
+    fn default() -> Self {
+        DatabaseType::SurrealDB
+    }
+}
+
 /// 数据库配置
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(default)]
 pub struct DatabaseConfig {
+    /// 数据库类型
+    pub db_type: DatabaseType,
     /// SurrealDB 连接地址
     pub url: String,
-    /// 命名空间
+    /// 命名空间 (SurrealDB) / Database (ArangoDB)
     pub namespace: String,
-    /// 数据库名称
+    /// 数据库名称 (SurrealDB) / Collection Prefix (ArangoDB)
     pub database: String,
     /// 用户名
     pub username: String,
@@ -23,6 +41,8 @@ pub struct DatabaseConfig {
     pub connection_timeout: u64,
     /// 空闲超时（秒）
     pub idle_timeout: u64,
+    /// ArangoDB 集合前缀
+    pub collection_prefix: String,
 }
 
 /// 向量数据库配置
@@ -144,6 +164,7 @@ impl AppConfig {
     pub fn development() -> Self {
         Self {
             database: DatabaseConfig {
+                db_type: DatabaseType::SurrealDB,
                 url: "ws://localhost:8000".into(),
                 namespace: "hippos".into(),
                 database: "sessions".into(),
@@ -153,6 +174,7 @@ impl AppConfig {
                 max_connections: 50,
                 connection_timeout: 30,
                 idle_timeout: 300,
+                collection_prefix: "hippos_".into(),
             },
             vector: VectorConfig {
                 data_dir: PathBuf::from("./data/lancedb"),
@@ -210,5 +232,91 @@ impl AppConfig {
             .unwrap_or(4);
         config.security.rate_limit_enabled = true;
         config
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_database_config_default() {
+        let config = DatabaseConfig::default();
+        assert_eq!(config.db_type, DatabaseType::SurrealDB);
+        assert!(config.url.is_empty());
+        assert!(config.namespace.is_empty());
+        assert!(config.database.is_empty());
+        assert_eq!(config.min_connections, 0);
+        assert_eq!(config.max_connections, 0);
+        assert!(config.collection_prefix.is_empty());
+    }
+
+    #[test]
+    fn test_database_type_default() {
+        let db_type = DatabaseType::default();
+        assert_eq!(db_type, DatabaseType::SurrealDB);
+    }
+
+    #[test]
+    fn test_database_type_serialization() {
+        // Test that database types serialize correctly
+        let surreal = serde_json::to_string(&DatabaseType::SurrealDB).unwrap();
+        let arango = serde_json::to_string(&DatabaseType::ArangoDB).unwrap();
+
+        assert!(surreal.contains("surrealdb"));
+        assert!(arango.contains("arangodb"));
+    }
+
+    #[test]
+    fn test_app_config_development() {
+        let config = AppConfig::development();
+
+        assert_eq!(config.environment, "development");
+        assert_eq!(config.database.url, "ws://localhost:8000");
+        assert_eq!(config.database.namespace, "hippos");
+        assert_eq!(config.database.db_type, DatabaseType::SurrealDB);
+        assert_eq!(config.server.port, 8080);
+        assert_eq!(config.security.api_key, "dev-api-key-change-in-production");
+        assert!(!config.security.rate_limit_enabled);
+    }
+
+    #[test]
+    fn test_app_config_production() {
+        let config = AppConfig::production();
+
+        assert_eq!(config.environment, "production");
+        assert_eq!(config.logging.level, "info");
+        assert!(config.security.rate_limit_enabled);
+    }
+
+    #[test]
+    fn test_vector_config_from_development() {
+        let config = AppConfig::development().vector;
+        assert_eq!(config.dimension, 384);
+        assert_eq!(config.nlist, 1024);
+        assert_eq!(config.distance_type, "cosine");
+    }
+
+    #[test]
+    fn test_server_config_from_development() {
+        let config = AppConfig::development().server;
+        assert_eq!(config.host, "0.0.0.0");
+        assert_eq!(config.port, 8080);
+        assert_eq!(config.workers, 4);
+    }
+
+    #[test]
+    fn test_security_config_from_development() {
+        let config = AppConfig::development().security;
+        assert_eq!(config.api_key, "dev-api-key-change-in-production");
+        assert!(!config.rate_limit_enabled);
+    }
+
+    #[test]
+    fn test_embedding_config_from_development() {
+        let config = AppConfig::development().embedding;
+        assert_eq!(config.model_name, "all-MiniLM-L6-v2");
+        assert_eq!(config.backend, "simple");
+        assert!(!config.use_gpu);
     }
 }

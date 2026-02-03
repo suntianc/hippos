@@ -20,16 +20,19 @@ tokio = { version = "1.35", features = ["full"] }
 async-trait = "0.1"
 
 # === Web 框架 ===
-axum = { version = "0.7", features = ["json", "macros"] }
+axum = { version = "0.7", features = ["json", "macros", "ws"] }
 tower = { version = "0.4", features = ["util", "filter"] }
 tower-http = { version = "0.5", features = ["cors", "trace", "normalize-path"] }
 
 # === OpenAPI 文档 ===
 utoipa = "5.4"
-utoipa-axum = "0.2"
+# utoipa-axum = "0.2"  # Pulls in axum 0.8.8 → tokio-tungstenite 0.24.0 (not cached)
 
 # === 数据库 ===
-surrealdb = { version = "2.0.0", features = ["http", "kv-rocksdb"] }
+arangors = { version = "0.6", optional = true }
+bb8 = { version = "0.9", optional = true }
+bb8-arangodb = { version = "0.2", optional = true }
+surrealdb = { version = "2.0.0", optional = true, default-features = false, features = ["http", "kv-rocksdb"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_with = "3.4"
@@ -56,6 +59,9 @@ tokenizers = "0.22"
 candle-core = "0.4"
 candle-transformers = "0.4"
 
+# Force half to v2.4.1 (rand_distr is optional dependency)
+half = "=2.4.1"
+
 # === 安全/加密 ===
 openssl = { version = "0.10", features = ["vendored"] }
 aes-gcm = "0.10"
@@ -67,7 +73,7 @@ redis = { version = "0.25", features = ["tokio-native-tls-comp"] }
 reqwest = { version = "0.11", features = ["json"] }
 
 # === MCP 协议 ===
-rmcp = { version = "0.2", features = ["macros", "transport-io"] }
+rmcp = { version = "0.2.1", features = ["macros", "transport-io"] }
 schemars = "0.8"
 
 # === 工具库 ===
@@ -80,6 +86,14 @@ derive_more = { version = "1.0", features = ["display", "error"] }
 regex = "1.12.2"
 jsonwebtoken = { version = "10.2.0", features = ["rust_crypto"] }
 validator = "0.20.0"
+tokio-stream = { version = "0.1", features = ["sync"] }
+futures-util = "0.3"
+
+# === 特性 ===
+[features]
+default = ["surrealdb"]
+surrealdb = ["dep:surrealdb"]
+arangodb = ["dep:arangors", "dep:bb8", "dep:bb8-arangodb"]
 
 # === 测试 ===
 [dev-dependencies]
@@ -87,7 +101,7 @@ criterion = { version = "0.5", features = ["async"] }
 fake = "2.9"
 rstest = "0.18"
 mockall = "0.12"
-axum-test = "18"
+# axum-test = "18"  # Pulls in axum 0.8.8 → tokio-tungstenite 0.24.0 (not cached)
 wiremock = "0.6"
 
 [profile.release]
