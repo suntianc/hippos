@@ -1,0 +1,408 @@
+openapi: 3.1.0
+info:
+  title: Personal Agent Memory API
+  version: 0.1.0
+  description: |
+    个人 Agent 记忆系统对外接口（面向外部 Agent）。
+    个人版默认采用隐式身份注入：tenant_id/user_id/agent_id/session_id 由服务端根据鉴权上下文和默认策略补齐。
+servers:
+  - url: https://memory.example.com
+security:
+  - bearerAuth: []
+tags:
+  - name: Events
+  - name: Query
+  - name: Governance
+  - name: Audit
+paths:
+  /api/v1/events.append:
+    post:
+      tags: [Events]
+      summary: 追加单条事件
+      operationId: appendEvent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventAppendRequest'
+      responses:
+        '200':
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventAppendResponse'
+
+  /api/v1/events.batch_append:
+    post:
+      tags: [Events]
+      summary: 批量追加事件
+      operationId: batchAppendEvents
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventBatchAppendRequest'
+      responses:
+        '200':
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventBatchAppendResponse'
+
+  /api/v1/memory.query:
+    post:
+      tags: [Query]
+      summary: 联合查询事实/线索/关系
+      operationId: queryMemory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MemoryQueryRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemoryQueryResponse'
+
+  /api/v1/memory.facts:
+    get:
+      tags: [Query]
+      summary: 查询当前有效事实
+      operationId: listFacts
+      parameters:
+        - in: query
+          name: scope
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  facts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/FactItem'
+
+  /api/v1/memory.facts/{id}/override:
+    post:
+      tags: [Governance]
+      summary: 覆盖事实（版本化）
+      operationId: overrideFact
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FactOverrideRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GovernanceActionResponse'
+
+  /api/v1/memory.facts/{id}/revoke:
+    post:
+      tags: [Governance]
+      summary: 撤回事实
+      operationId: revokeFact
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GovernanceActionResponse'
+
+  /api/v1/memory.recalls/{id}:
+    delete:
+      tags: [Governance]
+      summary: 删除线索记录
+      operationId: deleteRecall
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GovernanceActionResponse'
+
+  /api/v1/memory.audit/{trace_id}:
+    get:
+      tags: [Audit]
+      summary: 查询审计轨迹
+      operationId: getAuditTrace
+      parameters:
+        - in: path
+          name: trace_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditTraceResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    EventType:
+      type: string
+      enum: [utterance, action, feedback, import]
+
+    EventAppendRequest:
+      type: object
+      additionalProperties: false
+      required: [content]
+      properties:
+        content:
+          type: string
+          minLength: 1
+        conversation_id:
+          type: string
+          description: 可选，不传则服务端自动生成并返回
+        event_type:
+          $ref: '#/components/schemas/EventType'
+        ts:
+          type: string
+          format: date-time
+        agent:
+          type: string
+          description: 可选，默认 agent:default
+        meta:
+          type: object
+          additionalProperties: true
+
+    EventAppendResponse:
+      type: object
+      required: [event_id, trace_id, conversation_id, accepted]
+      properties:
+        event_id:
+          type: string
+        trace_id:
+          type: string
+        conversation_id:
+          type: string
+        accepted:
+          type: boolean
+
+    EventBatchAppendRequest:
+      type: object
+      additionalProperties: false
+      required: [events]
+      properties:
+        events:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/EventAppendRequest'
+
+    EventBatchAppendResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/EventAppendResponse'
+
+    MemoryQueryRequest:
+      type: object
+      additionalProperties: false
+      required: [query_text]
+      properties:
+        query_text:
+          type: string
+          minLength: 1
+        scope:
+          type: string
+        top_k:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 10
+        hops:
+          type: integer
+          minimum: 1
+          maximum: 4
+          default: 1
+        conversation_id:
+          type: string
+
+    FactItem:
+      type: object
+      properties:
+        id:
+          type: string
+        fact_key:
+          type: string
+        fact_value:
+          oneOf:
+            - type: string
+            - type: number
+            - type: boolean
+            - type: object
+            - type: array
+        scope:
+          type: string
+        version:
+          type: integer
+        status:
+          type: string
+        source_trace:
+          type: string
+
+    RecallItem:
+      type: object
+      properties:
+        id:
+          type: string
+        text:
+          type: string
+        score:
+          type: number
+          format: float
+        event_ref:
+          type: string
+
+    RelationItem:
+      type: object
+      properties:
+        id:
+          type: string
+        from:
+          type: string
+        to:
+          type: string
+        rel_type:
+          type: string
+        weight:
+          type: number
+        scope:
+          type: string
+
+    MemoryQueryResponse:
+      type: object
+      required: [facts, recalls, relations, trace_id]
+      properties:
+        facts:
+          type: array
+          items:
+            $ref: '#/components/schemas/FactItem'
+        recalls:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecallItem'
+        relations:
+          type: array
+          items:
+            $ref: '#/components/schemas/RelationItem'
+        trace_id:
+          type: string
+
+    FactOverrideRequest:
+      type: object
+      additionalProperties: false
+      required: [fact_value]
+      properties:
+        fact_value:
+          oneOf:
+            - type: string
+            - type: number
+            - type: boolean
+            - type: object
+            - type: array
+        scope:
+          type: string
+        reason:
+          type: string
+
+    GovernanceActionResponse:
+      type: object
+      required: [ok, action, target_id, trace_id]
+      properties:
+        ok:
+          type: boolean
+        action:
+          type: string
+        target_id:
+          type: string
+        trace_id:
+          type: string
+
+    AuditItem:
+      type: object
+      properties:
+        action:
+          type: string
+        target_type:
+          type: string
+        target_id:
+          type: string
+        reason:
+          type: string
+        operator:
+          type: string
+        ts:
+          type: string
+          format: date-time
+
+    AuditTraceResponse:
+      type: object
+      required: [trace_id, items]
+      properties:
+        trace_id:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditItem'
