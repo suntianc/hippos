@@ -65,7 +65,7 @@ pub async fn create_entity(
 /// GET /api/v1/entities/:id
 pub async fn get_entity(
     State(state): State<AppState>,
-    Extension(claims): Extension<Claims>,
+    Extension(_claims): Extension<Claims>,
     Path(id): Path<String>,
 ) -> Result<impl IntoResponse, AppError> {
     debug!("Getting entity: {}", id);
@@ -87,7 +87,7 @@ pub async fn get_entity(
 /// PUT /api/v1/entities/:id
 pub async fn update_entity(
     State(state): State<AppState>,
-    Extension(claims): Extension<Claims>,
+    Extension(_claims): Extension<Claims>,
     Path(id): Path<String>,
     Json(request): Json<UpdateEntityRequest>,
 ) -> Result<impl IntoResponse, AppError> {
@@ -126,7 +126,7 @@ pub async fn update_entity(
 /// DELETE /api/v1/entities/:id
 pub async fn delete_entity(
     State(state): State<AppState>,
-    Extension(claims): Extension<Claims>,
+    Extension(_claims): Extension<Claims>,
     Path(id): Path<String>,
 ) -> Result<impl IntoResponse, AppError> {
     debug!("Deleting entity: {}", id);
@@ -243,7 +243,7 @@ pub async fn search_entities(
 /// POST /api/v1/entities/graph/query
 pub async fn query_graph(
     State(state): State<AppState>,
-    Extension(claims): Extension<Claims>,
+    Extension(_claims): Extension<Claims>,
     Json(request): Json<GraphQueryRequest>,
 ) -> Result<impl IntoResponse, AppError> {
     debug!("Querying graph for entity: {}", request.center_entity_id);
@@ -325,7 +325,7 @@ pub async fn get_graph_stats(
 /// POST /api/v1/relationships
 pub async fn create_relationship(
     State(state): State<AppState>,
-    Extension(claims): Extension<Claims>,
+    Extension(_claims): Extension<Claims>,
     Json(request): Json<CreateRelationshipRequest>,
 ) -> Result<impl IntoResponse, AppError> {
     debug!(
@@ -378,7 +378,7 @@ pub async fn create_relationship(
 /// GET /api/v1/relationships/:id
 pub async fn get_relationship(
     State(state): State<AppState>,
-    Extension(claims): Extension<Claims>,
+    Extension(_claims): Extension<Claims>,
     Path(id): Path<String>,
 ) -> Result<impl IntoResponse, AppError> {
     debug!("Getting relationship: {}", id);
@@ -400,7 +400,7 @@ pub async fn get_relationship(
 /// DELETE /api/v1/relationships/:id
 pub async fn delete_relationship(
     State(state): State<AppState>,
-    Extension(claims): Extension<Claims>,
+    Extension(_claims): Extension<Claims>,
     Path(id): Path<String>,
 ) -> Result<impl IntoResponse, AppError> {
     debug!("Deleting relationship: {}", id);
@@ -431,7 +431,7 @@ pub async fn delete_relationship(
 /// GET /api/v1/entities/:id/relationships
 pub async fn get_entity_relationships(
     State(state): State<AppState>,
-    Extension(claims): Extension<Claims>,
+    Extension(_claims): Extension<Claims>,
     Path(entity_id): Path<String>,
 ) -> Result<impl IntoResponse, AppError> {
     debug!("Getting relationships for entity: {}", entity_id);
@@ -470,7 +470,7 @@ pub async fn get_entity_relationships(
 /// POST /api/v1/entities/:id/aliases
 pub async fn add_entity_alias(
     State(state): State<AppState>,
-    Extension(claims): Extension<Claims>,
+    Extension(_claims): Extension<Claims>,
     Path(id): Path<String>,
     Json(request): Json<AddAliasRequest>,
 ) -> Result<impl IntoResponse, AppError> {
@@ -504,7 +504,7 @@ pub async fn add_entity_alias(
 /// POST /api/v1/entities/:id/properties
 pub async fn add_entity_property(
     State(state): State<AppState>,
-    Extension(claims): Extension<Claims>,
+    Extension(_claims): Extension<Claims>,
     Path(id): Path<String>,
     Json(request): Json<AddPropertyRequest>,
 ) -> Result<impl IntoResponse, AppError> {

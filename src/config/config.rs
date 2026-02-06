@@ -49,7 +49,7 @@ pub struct DatabaseConfig {
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(default)]
 pub struct VectorConfig {
-    /// LanceDB 数据目录
+    /// 向量索引数据目录
     pub data_dir: PathBuf,
     /// 向量维度
     pub dimension: usize,
@@ -177,7 +177,7 @@ impl AppConfig {
                 collection_prefix: "hippos_".into(),
             },
             vector: VectorConfig {
-                data_dir: PathBuf::from("./data/lancedb"),
+                data_dir: PathBuf::from("./data/vector"),
                 dimension: 384,
                 nlist: 1024,
                 nprobe: 32,

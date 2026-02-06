@@ -4,8 +4,8 @@
 
 use crate::api::handlers::turn_handler::*;
 use axum::{
-    Router,
     routing::{delete, get, post, put},
+    Router,
 };
 
 use crate::api::app_state::AppState;

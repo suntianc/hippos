@@ -4,8 +4,8 @@
 
 use crate::api::handlers::search_handler::*;
 use axum::{
-    Router,
     routing::{get, post},
+    Router,
 };
 
 use crate::api::app_state::AppState;

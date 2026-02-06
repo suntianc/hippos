@@ -157,15 +157,6 @@ mod tests {
     use crate::index::embedding::SimpleEmbeddingModel;
     use crate::index::full_text::MemoryFtsIndex;
     use crate::index::vector::MemoryVectorIndex;
-    use std::sync::Arc;
-
-    fn create_mock_turn_repository() -> Arc<TurnRepository> {
-        // We can't easily create a TurnRepository without a real DB in tests
-        // For now, skip the test that requires a real DB
-        // TODO: Add proper mock repository for testing
-        Arc::new(unsafe { std::mem::zeroed() })
-    }
-
     #[tokio::test]
     async fn test_retrieval_service_list_recent() {
         let embedding_model: Box<dyn crate::index::EmbeddingModel> =
@@ -182,7 +173,5 @@ mod tests {
         // Skip this test for now as it requires a real database
         // The actual functionality is tested through integration tests
         return;
-        // Suppress unused variable warning
-        let _ = create_mock_turn_repository();
     }
 }

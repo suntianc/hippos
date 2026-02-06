@@ -119,7 +119,7 @@ async fn handle_socket(ws: WebSocket, state: Arc<AppState>) {
 
     let _ = connection_manager.add_connection().await;
 
-    let mut rx = connection_manager.subscribe();
+    let rx = connection_manager.subscribe();
 
     let connection = Arc::new(tokio::sync::Mutex::new(ws_connection));
 

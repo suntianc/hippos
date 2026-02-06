@@ -4,14 +4,13 @@
 //! Implements multi-level caching (L1 in-memory, L2 distributed) and batch processing
 //! to optimize performance for high-throughput scenarios.
 
-use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
-use tracing::{debug, info, warn};
+use tracing::debug;
 
 /// Configuration for performance optimization
 #[derive(Debug, Clone, Serialize, Deserialize)]
