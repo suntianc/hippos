@@ -1,0 +1,117 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/session-start.sh"
+          },
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/rules-loader.sh"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/skill-forced-eval.sh"
+          },
+          {
+            "type": "command",
+            "command": "osascript -e 'display notification \"User Prompt Submitted\" with title \"Claude Code\"'"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/pre-tool-use.sh"
+          },
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/pre-tool-rules.sh"
+          },
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/plan-reread.sh"
+          }
+        ]
+      }
+    ],
+    "SkillInvocation": [
+      {
+        "matcher": "spec-interview",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'Spec Interview skill activated'"
+          }
+        ]
+      },
+      {
+        "matcher": "planning-with-files",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'Planning-with-Files skill activated'"
+          }
+        ]
+      },
+      {
+        "matcher": "ui-ux-pro-max",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'UI/UX Pro Max skill activated'"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/completion-check.sh"
+          },
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/stop.sh"
+          },
+          {
+            "type": "command",
+            "command": "osascript -e 'display notification \"Task Completed\" with title \"Claude Code\"'"
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "osascript -e 'display notification \"New notification\" with title \"Claude Code\"'"
+          }
+        ]
+      }
+    ]
+  },
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"]
+    }
+  }
+}
